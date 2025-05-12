@@ -1,5 +1,7 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
+const { selectFiles } = require('./fileSelector');
+const { renameFiles } = require('./fileRenamer');
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -7,8 +9,8 @@ function createWindow() {
     height: 600,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: true,
-      contextIsolation: false
+      nodeIntegration: false,
+      contextIsolation: true
     }
   });
   win.loadFile('index.html');
@@ -24,4 +26,12 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
+});
+
+ipcMain.handle('select-files', async () => {
+  return await selectFiles();
+});
+
+ipcMain.handle('rename-files', async (event, filePaths) => {
+  return await renameFiles(filePaths);
 }); 
