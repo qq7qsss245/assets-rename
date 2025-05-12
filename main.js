@@ -32,6 +32,6 @@ ipcMain.handle('select-files', async () => {
   return await selectFiles();
 });
 
-ipcMain.handle('rename-files', async (event, filePaths) => {
-  return await renameFiles(filePaths);
+ipcMain.handle('rename-files', async (event, data) => {
+  return await renameFiles(data.files, data.fields);
 }); 

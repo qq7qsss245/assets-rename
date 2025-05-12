@@ -20,5 +20,9 @@
   "description": "",
   "devDependencies": {
     "electron": "^36.2.0"
+  },
+  "dependencies": {
+    "ffprobe-static": "^3.1.0",
+    "fluent-ffmpeg": "^2.1.3"
   }
 }

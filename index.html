@@ -11,6 +11,13 @@
   <button id="select-files">选择文件</button>
   <button id="rename-files">批量重命名</button>
   <div id="file-list"></div>
+  <form id="rename-form" style="margin-bottom: 10px;">
+    <label>产品名：<input type="text" id="product" required></label>
+    <label>模板名：<input type="text" id="template" required></label>
+    <label>视频名：<input type="text" id="video" required></label>
+    <label>制作人：<input type="text" id="author" required></label>
+    <label>时长（秒）：<input type="text" id="duration" required></label>
+  </form>
   <p>后续功能将逐步完善。</p>
   <script>
     let selectedFiles = [];
@@ -29,7 +36,17 @@
         alert('请先选择文件！');
         return;
       }
-      const result = await window.electronAPI.renameFiles(selectedFiles);
+      const product = document.getElementById('product').value.trim();
+      const template = document.getElementById('template').value.trim();
+      const video = document.getElementById('video').value.trim();
+      const author = document.getElementById('author').value.trim();
+      const duration = document.getElementById('duration').value.trim();
+      if (!product || !template || !video || !author || !duration) {
+        alert('请填写所有字段！');
+        return;
+      }
+      const fields = { product, template, video, author, duration };
+      const result = await window.electronAPI.renameFiles({ files: selectedFiles, fields });
       let html = '<b>重命名结果：</b><br>';
       result.forEach(r => {
         if (r.success) {

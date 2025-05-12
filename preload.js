@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   selectFiles: () => ipcRenderer.invoke('select-files'),
-  renameFiles: (filePaths) => ipcRenderer.invoke('rename-files', filePaths)
+  renameFiles: (data) => ipcRenderer.invoke('rename-files', data)
 });
 
 // 预加载脚本，目前暂时为空，后续可扩展
