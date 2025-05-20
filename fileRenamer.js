@@ -37,9 +37,16 @@ function getNearestRatio(width, height) {
   return nearest;
 }
 
-function buildName(fields, ext, ratio) {
+function extractLanguageCode(filePath) {
+  // 从文件名中提取语言代码，格式为[xx]，如[en]、[zh]、[fr]等
+  const fileName = path.basename(filePath);
+  const match = fileName.match(/\[([a-z]{2})\]/i);
+  return match ? match[1].toLowerCase() : null;
+}
+
+function buildName(fields, ext, ratio, language) {
   // S-比例、L-语言为占位符
-  return `${getTodayStr()}_P-${fields.product}_T-${fields.template}_C-${fields.video}_S-${ratio}_L-语言_D-${fields.author}_M-${fields.duration}${ext}`;
+  return `${getTodayStr()}_P-${fields.product}_T-${fields.template}_C-${fields.video}_S-${ratio}_L-${language}_D-${fields.author}_M-${fields.duration}${ext}`;
 }
 
 function getNonDuplicateName(dir, baseName, ext) {
@@ -75,7 +82,11 @@ async function renameFiles(filePaths, fields) {
     // 检测视频尺寸
     const { width, height } = await getVideoSize(oldPath);
     const ratio = getNearestRatio(width, height);
-    const baseName = buildName(fields, '', ratio);
+    
+    // 从文件名中提取语言代码，如果没有则使用默认值"unknown"
+    const languageCode = extractLanguageCode(oldPath) || "unknown";
+    
+    const baseName = buildName(fields, '', ratio, languageCode);
     const newName = getNonDuplicateName(dir, baseName, ext);
     const newPath = path.join(dir, newName);
     try {
