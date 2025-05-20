@@ -1,9 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
-const ffprobeStatic = require('ffprobe-static');
-
-ffmpeg.setFfprobePath(ffprobeStatic.path);
+// ffprobe路径现在在main.js中统一设置
 
 function getTodayStr() {
   const now = new Date();
