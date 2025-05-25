@@ -42,19 +42,45 @@ function extractLanguageCode(filePath) {
   return match ? match[1].toLowerCase() : null;
 }
 
-function buildName(fields, ext, ratio, language) {
+function buildName(fields, ext, ratio, language, videoSuffix = '') {
   // S-比例、L-语言为占位符
-  return `${getTodayStr()}_P-${fields.product}_T-${fields.template}_C-${fields.video}_S-${ratio}_L-${language}_D-${fields.author}_M-${fields.duration}${ext}`;
+  // videoSuffix 用于在视频名后添加数字后缀
+  const videoName = `${fields.video}${videoSuffix}`;
+  return `${getTodayStr()}_P-${fields.product}_T-${fields.template}_C-${videoName}_S-${ratio}_L-${language}_D-${fields.author}_M-${fields.duration}${ext}`;
 }
 
-function getNonDuplicateName(dir, baseName, ext) {
-  let name = `${baseName}${ext}`;
-  let counter = 1;
-  while (fs.existsSync(path.join(dir, name))) {
-    name = `${baseName}(${counter})${ext}`;
+function getUniqueVideoName(dir, fields, ext, ratio, language, useNumberSuffix = false) {
+  // 先尝试不带后缀的原始名称
+  let videoSuffix = '';
+  let baseName = buildName(fields, '', ratio, language, videoSuffix);
+  let fullName = `${baseName}${ext}`;
+  
+  if (!fs.existsSync(path.join(dir, fullName))) {
+    return { name: fullName, videoSuffix: '' };
+  }
+  
+  if (!useNumberSuffix) {
+    // 如果不使用数字后缀，则使用原来的括号格式处理整个文件名
+    let counter = 1;
+    while (fs.existsSync(path.join(dir, fullName))) {
+      baseName = buildName(fields, '', ratio, language, '');
+      fullName = `${baseName}(${counter})${ext}`;
+      counter++;
+    }
+    return { name: fullName, videoSuffix: '' };
+  }
+  
+  // 使用数字后缀格式，在视频名后添加数字
+  let counter = 2; // 从2开始，因为第一个不加后缀
+  
+  while (fs.existsSync(path.join(dir, fullName))) {
+    videoSuffix = counter.toString();
+    baseName = buildName(fields, '', ratio, language, videoSuffix);
+    fullName = `${baseName}${ext}`;
     counter++;
   }
-  return name;
+  
+  return { name: fullName, videoSuffix };
 }
 
 function getVideoSize(filePath) {
@@ -71,12 +97,15 @@ function getVideoSize(filePath) {
   });
 }
 
-async function renameFiles(filePaths, fields) {
+async function renameFiles(filePaths, fields, options = {}) {
+  const useNumberSuffix = options.useNumberSuffix || false;
   const results = [];
+  
   for (let i = 0; i < filePaths.length; i++) {
     const oldPath = filePaths[i];
     const dir = path.dirname(oldPath);
     const ext = path.extname(oldPath);
+    
     // 检测视频尺寸
     const { width, height } = await getVideoSize(oldPath);
     const ratio = getNearestRatio(width, height);
@@ -84,16 +113,18 @@ async function renameFiles(filePaths, fields) {
     // 从文件名中提取语言代码，如果没有则使用默认值"unknown"
     const languageCode = extractLanguageCode(oldPath) || "unknown";
     
-    const baseName = buildName(fields, '', ratio, languageCode);
-    const newName = getNonDuplicateName(dir, baseName, ext);
+    // 获取唯一的文件名，处理重名情况
+    const { name: newName, videoSuffix } = getUniqueVideoName(dir, fields, ext, ratio, languageCode, useNumberSuffix);
     const newPath = path.join(dir, newName);
+    
     try {
       await fs.promises.rename(oldPath, newPath);
-      results.push({ oldPath, newPath, success: true });
+      results.push({ oldPath, newPath, success: true, videoSuffix });
     } catch (err) {
-      results.push({ oldPath, newPath, success: false, error: err.message });
+      results.push({ oldPath, newPath, success: false, error: err.message, videoSuffix });
     }
   }
+  
   return results;
 }
 

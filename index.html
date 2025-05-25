@@ -66,6 +66,18 @@
                 <label for="duration" class="form-label">时长（秒）：</label>
                 <input type="text" class="form-control" id="duration" required>
               </div>
+              <div class="mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="useNumberSuffix">
+                  <label class="form-check-label" for="useNumberSuffix">
+                    启用数字后缀序号（重名时添加2、3、4等后缀）
+                  </label>
+                </div>
+                <small class="form-text text-muted">
+                  勾选：Test → Test2、Test3、Test4<br>
+                  不勾选：Test → Test(1)、Test(2)、Test(3)
+                </small>
+              </div>
             </form>
           </div>
           <div class="card-footer">
@@ -138,24 +150,31 @@
         showAlert('请先选择文件！', 'danger');
         return;
       }
+      
       const product = document.getElementById('product').value.trim();
       const template = document.getElementById('template').value.trim();
       const video = document.getElementById('video').value.trim();
       const author = document.getElementById('author').value.trim();
       const duration = document.getElementById('duration').value.trim();
+      const useNumberSuffix = document.getElementById('useNumberSuffix').checked;
+      
       if (!product || !template || !video || !author || !duration) {
         showAlert('请填写所有字段！', 'danger');
         return;
       }
+      
       const fields = { product, template, video, author, duration };
-      const result = await window.electronAPI.renameFiles({ files: selectedFiles, fields });
+      const options = { useNumberSuffix };
+      
+      const result = await window.electronAPI.renameFiles({ files: selectedFiles, fields, options });
       let html = '<div class="list-group">';
       result.forEach(r => {
         if (r.success) {
+          const suffixInfo = r.videoSuffix ? `（视频名添加后缀：${r.videoSuffix}）` : '（无后缀）';
           html += `
             <div class="list-group-item list-group-item-success">
               <div class="d-flex w-100 justify-content-between">
-                <h6 class="mb-1">重命名成功</h6>
+                <h6 class="mb-1">重命名成功 ${suffixInfo}</h6>
               </div>
               <p class="mb-1"><small>原文件：${r.oldPath}</small></p>
               <p class="mb-0"><small>新文件：${r.newPath}</small></p>
