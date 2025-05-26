@@ -42,9 +42,9 @@ function extractLanguageCode(filePath) {
   return match ? match[1].toLowerCase() : null;
 }
 
-function buildName(fields, ext, ratio, language) {
-  // S-比例、L-语言为占位符
-  return `${getTodayStr()}_P-${fields.product}_T-${fields.template}_C-${fields.video}_S-${ratio}_L-${language}_D-${fields.author}_M-${fields.duration}${ext}`;
+function buildName(fields, ext, ratio, language, videoDuration) {
+  // S-比例、L-语言为占位符，VL-L为视频时长，M为制作时长（小时）
+  return `${getTodayStr()}_P-${fields.product}_T-${fields.template}_C-${fields.video}_S-${ratio}_L-${language}_VL-L-${videoDuration}_D-${fields.author}_M-${fields.duration}${ext}`;
 }
 
 function getNonDuplicateName(dir, baseName, ext) {
@@ -71,20 +71,51 @@ function getVideoSize(filePath) {
   });
 }
 
+/**
+ * 获取视频文件的时长（秒）
+ * @param {string} filePath - 视频文件路径
+ * @returns {Promise<number|null>} 视频时长（秒），如果获取失败则返回null
+ */
+function getVideoDuration(filePath) {
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(filePath, (err, metadata) => {
+      if (err) return resolve(null);
+      // 尝试从格式信息中获取时长
+      if (metadata.format && metadata.format.duration) {
+        // 将浮点数时长转换为整数秒
+        resolve(Math.round(metadata.format.duration));
+        return;
+      }
+      // 如果格式信息中没有时长，尝试从视频流中获取
+      const videoStream = metadata.streams.find(s => s.codec_type === 'video');
+      if (videoStream && videoStream.duration) {
+        resolve(Math.round(videoStream.duration));
+        return;
+      }
+      // 无法获取时长
+      resolve(null);
+    });
+  });
+}
+
 async function renameFiles(filePaths, fields) {
   const results = [];
   for (let i = 0; i < filePaths.length; i++) {
     const oldPath = filePaths[i];
     const dir = path.dirname(oldPath);
     const ext = path.extname(oldPath);
+    
     // 检测视频尺寸
     const { width, height } = await getVideoSize(oldPath);
     const ratio = getNearestRatio(width, height);
     
+    // 获取视频时长
+    const videoDuration = await getVideoDuration(oldPath) || "unknown";
+    
     // 从文件名中提取语言代码，如果没有则使用默认值"unknown"
     const languageCode = extractLanguageCode(oldPath) || "unknown";
     
-    const baseName = buildName(fields, '', ratio, languageCode);
+    const baseName = buildName(fields, '', ratio, languageCode, videoDuration);
     const newName = getNonDuplicateName(dir, baseName, ext);
     const newPath = path.join(dir, newName);
     try {

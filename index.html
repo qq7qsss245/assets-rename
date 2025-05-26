@@ -63,8 +63,9 @@
                 <input type="text" class="form-control" id="author" required>
               </div>
               <div class="mb-3">
-                <label for="duration" class="form-label">时长（秒）：</label>
+                <label for="duration" class="form-label">制作时长（小时）：</label>
                 <input type="text" class="form-control" id="duration" required>
+                <div class="form-text">请输入制作该视频所花费的时间（小时）</div>
               </div>
             </form>
           </div>
@@ -145,6 +146,11 @@
       const duration = document.getElementById('duration').value.trim();
       if (!product || !template || !video || !author || !duration) {
         showAlert('请填写所有字段！', 'danger');
+        return;
+      }
+      // 验证制作时长是否为有效数字
+      if (isNaN(parseFloat(duration)) || parseFloat(duration) <= 0) {
+        showAlert('制作时长必须是大于0的数字！', 'danger');
         return;
       }
       const fields = { product, template, video, author, duration };
