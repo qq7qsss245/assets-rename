@@ -11,37 +11,105 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
   <style>
     body {
-      padding-top: 20px;
-      padding-bottom: 40px;
+      padding: 20px;
       background-color: #f8f9fa;
-    }
-    .file-item {
-      margin-bottom: 5px;
-    }
-    .result-success {
-      color: #198754;
-    }
-    .result-error {
-      color: #dc3545;
-    }
-    .dropdown-menu {
-      max-height: 300px;
-      overflow-y: auto;
-    }
-    .history-item-text {
-      word-break: break-all;
-    }
-    .input-group .dropdown-toggle {
-      border-left: none;
+      height: 100vh;
+      overflow: hidden;
     }
     
-    /* 拖拽区域样式 */
+    .main-container {
+      height: calc(100vh - 40px);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* 重命名参数区域 - 紧凑布局 */
+    .params-section {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .params-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      align-items: end;
+    }
+    
+    .param-group {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .param-group label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 5px;
+      color: #495057;
+    }
+    
+    .param-group .input-group {
+      height: 38px;
+    }
+    
+    .param-group .form-control {
+      font-size: 0.9rem;
+    }
+    
+    .param-group .form-text {
+      font-size: 0.75rem;
+      margin-top: 2px;
+    }
+    
+    /* 预览区域 */
+    .preview-section {
+      flex: 1;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    
+    .preview-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid #dee2e6;
+      background-color: #f8f9fa;
+      border-radius: 8px 8px 0 0;
+    }
+    
+    .preview-body {
+      flex: 1;
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .preview-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    
+    /* 拖拽区域样式 - 可点击 */
     .drop-zone {
       border: 2px dashed #dee2e6;
       border-radius: 8px;
       transition: all 0.3s ease;
       min-height: 200px;
       position: relative;
+      cursor: pointer;
+      background: #fafafa;
+    }
+    
+    .drop-zone:hover {
+      border-color: #0d6efd;
+      background-color: rgba(13, 110, 253, 0.05);
     }
     
     .drop-zone.drag-over {
@@ -67,6 +135,7 @@
       transition: color 0.3s ease;
     }
     
+    .drop-zone:hover .drop-zone-icon,
     .drop-zone.drag-over .drop-zone-icon {
       color: #0d6efd;
     }
@@ -75,11 +144,12 @@
       color: #6c757d;
       font-size: 1.1rem;
       margin-bottom: 0.5rem;
+      font-weight: 500;
     }
     
+    .drop-zone:hover .drop-zone-text,
     .drop-zone.drag-over .drop-zone-text {
       color: #0d6efd;
-      font-weight: 500;
     }
     
     .drop-zone-hint {
@@ -87,11 +157,17 @@
       font-size: 0.9rem;
     }
     
+    .drop-zone:hover .drop-zone-hint,
     .drop-zone.drag-over .drop-zone-hint {
       color: #0d6efd;
     }
     
     /* 预览表格样式 */
+    .preview-table-container {
+      flex: 1;
+      overflow-y: auto;
+    }
+    
     .preview-filename {
       font-family: 'Courier New', monospace;
       font-size: 0.85rem;
@@ -118,6 +194,26 @@
       z-index: 10;
     }
     
+    /* 操作按钮区域 */
+    .actions-section {
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      margin-top: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .actions-buttons {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+    }
+    
+    .actions-buttons .btn {
+      flex: 1;
+      max-width: 200px;
+    }
+    
     /* 文件状态样式 */
     .file-status-pending {
       color: #6c757d;
@@ -138,7 +234,6 @@
     .file-status-conflict {
       color: #fd7e14;
     }
-    
     
     /* 字段验证状态 */
     .field-valid {
@@ -164,8 +259,6 @@
       text-align: left;
     }
     
-    
-    
     /* 加载动画 */
     .loading-spinner {
       display: inline-block;
@@ -182,184 +275,237 @@
       100% { transform: rotate(360deg); }
     }
     
+    /* 历史记录下拉菜单 */
+    .dropdown-menu {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .history-item-text {
+      word-break: break-all;
+    }
+    
+    .input-group .dropdown-toggle {
+      border-left: none;
+    }
+    
     /* 响应式优化 */
+    @media (max-width: 1200px) {
+      .params-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
     @media (max-width: 768px) {
+      .params-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .actions-buttons {
+        flex-direction: column;
+      }
+      
+      .actions-buttons .btn {
+        max-width: none;
+      }
+      
       .preview-filename {
         font-size: 0.75rem;
+      }
+    }
+    
+    /* Toast通知样式 */
+    .toast-container {
+      z-index: 9999 !important;
+    }
+    
+    .toast {
+      min-width: 300px;
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    
+    .toast .toast-body {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    
+    .toast .bi {
+      font-size: 1.1rem;
+    }
+    
+    /* Toast动画优化 */
+    .toast.showing {
+      animation: slideInRight 0.3s ease-out;
+    }
+    
+    .toast.hide {
+      animation: slideOutRight 0.3s ease-in;
+    }
+    
+    @keyframes slideInRight {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    @keyframes slideOutRight {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(100%);
+        opacity: 0;
       }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- 标题区域 -->
-    <div class="row mb-4">
-      <div class="col-12">
-        <div class="bg-primary text-white p-3 rounded shadow-sm">
-          <h1 class="display-6">欢迎使用批量重命名工具</h1>
+  <div class="container-fluid">
+    <div class="main-container">
+      <!-- 重命名参数区域 -->
+      <div class="params-section">
+        <div class="params-grid">
+          <div class="param-group">
+            <label for="product">产品名</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="product" required>
+              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="product" aria-expanded="false">
+                <i class="bi bi-clock-history"></i>
+              </button>
+              <ul class="dropdown-menu" id="product-dropdown">
+                <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="param-group">
+            <label for="template">模板名</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="template" required>
+              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="template" aria-expanded="false">
+                <i class="bi bi-clock-history"></i>
+              </button>
+              <ul class="dropdown-menu" id="template-dropdown">
+                <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="param-group">
+            <label for="video">视频名</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="video" required>
+              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="video" aria-expanded="false">
+                <i class="bi bi-clock-history"></i>
+              </button>
+              <ul class="dropdown-menu" id="video-dropdown">
+                <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="param-group">
+            <label for="author">制作人</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="author" required>
+              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="author" aria-expanded="false">
+                <i class="bi bi-clock-history"></i>
+              </button>
+              <ul class="dropdown-menu" id="author-dropdown">
+                <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
+              </ul>
+            </div>
+          </div>
+          
+          <div class="param-group">
+            <label for="duration">制作时长（小时）</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="duration" required>
+              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="duration" aria-expanded="false">
+                <i class="bi bi-clock-history"></i>
+              </button>
+              <ul class="dropdown-menu" id="duration-dropdown">
+                <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
+              </ul>
+            </div>
+            <div class="form-text">请输入制作该视频所花费的时间（小时）</div>
+          </div>
+          
+          <div class="param-group">
+            <label for="language">语言（可选）</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="language" placeholder="如：en、zh、ja等">
+              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="language" aria-expanded="false">
+                <i class="bi bi-clock-history"></i>
+              </button>
+              <ul class="dropdown-menu" id="language-dropdown">
+                <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
+              </ul>
+            </div>
+            <div class="form-text">手动指定语言代码，将覆盖从文件名自动识别的语言</div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="row">
-      <!-- 左侧表单区域 -->
-      <div class="col-md-5">
-        <div class="card shadow-sm mb-4">
-          <div class="card-header bg-light">
-            <h5 class="card-title mb-0">重命名参数</h5>
-          </div>
-          <div class="card-body">
-            <form id="rename-form">
-              <div class="mb-3">
-                <label for="product" class="form-label">产品名：</label>
-                <div class="input-group">
-                  <input type="text" class="form-control" id="product" required>
-                  <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="product" aria-expanded="false">
-                    <i class="bi bi-clock-history"></i>
-                  </button>
-                  <ul class="dropdown-menu" id="product-dropdown">
-                    <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
-                  </ul>
-                </div>
+      <!-- 预览区域 -->
+      <div class="preview-section">
+        <div class="preview-header">
+          <h5 class="mb-0">重命名预览</h5>
+        </div>
+        <div class="preview-body">
+          <div class="preview-content">
+            <!-- 默认状态：拖拽区域（可点击选择文件） -->
+            <div id="drop-zone" class="drop-zone">
+              <div class="drop-zone-content">
+                <i class="bi bi-cloud-upload drop-zone-icon"></i>
+                <div class="drop-zone-text">点击选择文件或拖拽视频文件到此处</div>
+                <div class="drop-zone-hint">支持格式：MP4、MOV、AVI、MKV、FLV、WMV、WEBM</div>
               </div>
-              <div class="mb-3">
-                <label for="template" class="form-label">模板名：</label>
-                <div class="input-group">
-                  <input type="text" class="form-control" id="template" required>
-                  <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="template" aria-expanded="false">
-                    <i class="bi bi-clock-history"></i>
-                  </button>
-                  <ul class="dropdown-menu" id="template-dropdown">
-                    <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
-                  </ul>
-                </div>
+            </div>
+            
+            <!-- 预览表格 -->
+            <div id="preview-table" class="d-none">
+              <div class="preview-table-container">
+                <table class="table table-striped table-hover mb-0">
+                  <thead class="table-dark">
+                    <tr>
+                      <th style="width: 50%">原文件名</th>
+                      <th style="width: 50%">预览新文件名</th>
+                    </tr>
+                  </thead>
+                  <tbody id="preview-table-body">
+                    <!-- 预览数据将在这里动态生成 -->
+                  </tbody>
+                </table>
               </div>
-              <div class="mb-3">
-                <label for="video" class="form-label">视频名：</label>
-                <div class="input-group">
-                  <input type="text" class="form-control" id="video" required>
-                  <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="video" aria-expanded="false">
-                    <i class="bi bi-clock-history"></i>
-                  </button>
-                  <ul class="dropdown-menu" id="video-dropdown">
-                    <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
-                  </ul>
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="author" class="form-label">制作人：</label>
-                <div class="input-group">
-                  <input type="text" class="form-control" id="author" required>
-                  <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="author" aria-expanded="false">
-                    <i class="bi bi-clock-history"></i>
-                  </button>
-                  <ul class="dropdown-menu" id="author-dropdown">
-                    <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
-                  </ul>
-                </div>
-              </div>
-              <div class="mb-3">
-                <label for="duration" class="form-label">制作时长（小时）：</label>
-                <div class="input-group">
-                  <input type="text" class="form-control" id="duration" required>
-                  <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="duration" aria-expanded="false">
-                    <i class="bi bi-clock-history"></i>
-                  </button>
-                  <ul class="dropdown-menu" id="duration-dropdown">
-                    <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
-                  </ul>
-                </div>
-                <div class="form-text">请输入制作该视频所花费的时间（小时）</div>
-              </div>
-              <div class="mb-3">
-                <label for="language" class="form-label">语言（可选）：</label>
-                <div class="input-group">
-                  <input type="text" class="form-control" id="language" placeholder="如：en、zh、ja等">
-                  <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="language" aria-expanded="false">
-                    <i class="bi bi-clock-history"></i>
-                  </button>
-                  <ul class="dropdown-menu" id="language-dropdown">
-                    <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
-                  </ul>
-                </div>
-                <div class="form-text">手动指定语言代码，将覆盖从文件名自动识别的语言</div>
-              </div>
-              <!-- 移除"启用数字后缀序号"选项，改为自动处理 -->
-            </form>
-          </div>
-          <div class="card-footer">
-            <div class="d-grid gap-2">
-              <button id="select-files" class="btn btn-primary">
-                <i class="bi bi-folder2-open me-2"></i>选择文件
-              </button>
-              <button id="clear-fields" class="btn btn-outline-secondary">
-                <i class="bi bi-eraser me-2"></i>清空所有字段
-              </button>
-              <button id="rename-files" class="btn btn-success">
-                <i class="bi bi-check-circle me-2"></i>确认重命名
-              </button>
-              <button id="undo-rename" class="btn btn-warning" disabled>
-                <i class="bi bi-arrow-counterclockwise me-2"></i>撤回重命名
-              </button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 右侧预览界面区域 -->
-      <div class="col-md-7">
-        <div class="card shadow-sm">
-          <div class="card-header bg-light">
-            <h5 class="card-title mb-0">重命名预览</h5>
-          </div>
-          <div class="card-body">
-            <div id="preview-container" class="overflow-auto" style="max-height: 400px;">
-              <!-- 默认状态：拖拽区域 -->
-              <div id="drop-zone" class="drop-zone">
-                <div class="drop-zone-content">
-                  <i class="bi bi-cloud-upload drop-zone-icon"></i>
-                  <div class="drop-zone-text">拖拽视频文件到此处</div>
-                  <div class="drop-zone-hint">或点击"选择文件"按钮</div>
-                  <div class="drop-zone-hint mt-2">
-                    <small>支持格式：MP4、MOV、AVI、MKV、FLV、WMV、WEBM</small>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- 预览表格 -->
-              <div id="preview-table" class="d-none">
-                <div class="table-responsive">
-                  <table class="table table-striped table-hover">
-                    <thead class="table-dark">
-                      <tr>
-                        <th style="width: 50%">原文件名</th>
-                        <th style="width: 50%">预览新文件名</th>
-                      </tr>
-                    </thead>
-                    <tbody id="preview-table-body">
-                      <!-- 预览数据将在这里动态生成 -->
-                    </tbody>
-                  </table>
-                </div>
-                
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 底部信息 -->
-    <div class="row mt-4">
-      <div class="col-12">
-        <div class="alert alert-info">
-          <small>预览界面已简化：专注于文件名对比显示，提供更清晰的用户体验。</small>
+      <!-- 操作按钮区域 -->
+      <div class="actions-section">
+        <div class="actions-buttons">
+          <button id="clear-fields" class="btn btn-outline-secondary">
+            <i class="bi bi-eraser me-2"></i>清空字段
+          </button>
+          <button id="undo-rename" class="btn btn-warning" disabled>
+            <i class="bi bi-arrow-counterclockwise me-2"></i>撤回重命名
+          </button>
+          <button id="rename-files" class="btn btn-success">
+            <i class="bi bi-check-circle me-2"></i>确认重命名
+          </button>
         </div>
       </div>
     </div>
   </div>
-
-  <!-- 进度显示模态框 -->
+<!-- 进度显示模态框 -->
   <div class="modal fade" id="progressModal" tabindex="-1" aria-labelledby="progressModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
@@ -578,7 +724,7 @@
 
   <!-- Bootstrap JS -->
   <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
+<script>
     let selectedFiles = [];
     let previewData = [];
     
@@ -727,8 +873,7 @@
     
     // 创建预览管理器实例
     const previewManager = new PreviewManager();
-    
-    // 历史记录管理
+// 历史记录管理
     const STORAGE_KEY = 'renameToolHistory';
     const fieldNames = ['product', 'template', 'video', 'author', 'duration', 'language'];
     
@@ -890,8 +1035,7 @@
     async function updateFileListDisplay(files) {
       await previewManager.updatePreview(files);
     }
-    
-    // 拖拽事件处理
+// 拖拽事件处理
     function setupDragAndDrop() {
       const fileListDiv = document.getElementById('drop-zone');
       
@@ -913,6 +1057,23 @@
       
       // 处理文件拖拽
       fileListDiv.addEventListener('drop', handleDrop, false);
+      
+      // 添加点击事件处理（合并文件选择功能）
+      fileListDiv.addEventListener('click', async () => {
+        console.log('=== 点击拖拽区域选择文件 ===');
+        
+        const files = await window.electronAPI.selectFiles();
+        console.log('点击选择文件数量:', files ? files.length : 0);
+        
+        if (files && files.length > 0) {
+          selectedFiles = files;
+          updateFileListDisplay(files);
+          
+          // 自动填入视频名
+          autoFillVideoName(files);
+          showAlert(`成功选择 ${files.length} 个视频文件`, 'success');
+        }
+      });
       
       function preventDefaults(e) {
         e.preventDefault();
@@ -965,7 +1126,7 @@
         }
         
         if (filePaths.length === 0) {
-          showAlert('无法获取拖拽文件的路径，请使用"选择文件"按钮', 'danger');
+          showAlert('无法获取拖拽文件的路径，请使用点击选择文件功能', 'danger');
           return;
         }
         
@@ -1018,8 +1179,7 @@
         }
       });
     }
-    
-    // 进度管理器类
+// 进度管理器类
     class ProgressManager {
       constructor() {
         this.modal = null;
@@ -1221,97 +1381,7 @@
         return { allValid, errors };
       }
     }
-    
-    // 批量重命名功能
-    async function performBatchRename(selectedFileIds) {
-      const filesToRename = selectedFileIds.map(fileId => {
-        const index = parseInt(fileId.replace('file-', ''));
-        return previewData[index];
-      }).filter(item => item && item.originalPath);
-      
-      if (filesToRename.length === 0) {
-        showAlert('没有可重命名的文件', 'warning');
-        return;
-      }
-      
-      // 显示确认对话框
-      const confirmed = await showConfirmDialog(filesToRename);
-      if (!confirmed) return;
-      
-      // 开始重命名过程
-      previewManager.isProcessing = true;
-      progressManager.show(filesToRename.length);
-      
-      const fields = previewManager.getFormFields();
-      const options = { useNumberSuffix: true }; // 始终启用数字后缀序号
-      
-      let successCount = 0;
-      let errorCount = 0;
-      
-      for (let i = 0; i < filesToRename.length; i++) {
-        if (progressManager.isCancelled) break;
-        
-        const item = filesToRename[i];
-        const fileId = selectedFileIds[i];
-        
-        progressManager.updateProgress(i + 1, filesToRename.length, item.originalName);
-        progressManager.addLog(`正在处理: ${item.originalName}`);
-        
-        // 更新文件状态为处理中
-        previewManager.fileStates.set(fileId, 'processing');
-        previewManager.updateFileStatus(fileId, 'processing');
-        
-        try {
-          const result = await window.electronAPI.renameFiles({
-            files: [item.originalPath],
-            fields,
-            options
-          });
-          
-          if (result && result[0] && result[0].success) {
-            successCount++;
-            previewManager.fileStates.set(fileId, 'success');
-            previewManager.updateFileStatus(fileId, 'success');
-            progressManager.addLog(`✓ ${item.originalName} 重命名成功`, 'success');
-          } else {
-            errorCount++;
-            previewManager.fileStates.set(fileId, 'error');
-            previewManager.updateFileStatus(fileId, 'error');
-            const error = result && result[0] ? result[0].error : '未知错误';
-            progressManager.addLog(`✗ ${item.originalName} 重命名失败: ${error}`, 'error');
-          }
-        } catch (error) {
-          errorCount++;
-          previewManager.fileStates.set(fileId, 'error');
-          previewManager.updateFileStatus(fileId, 'error');
-          progressManager.addLog(`✗ ${item.originalName} 重命名失败: ${error.message}`, 'error');
-        }
-        
-        progressManager.updateCounts(successCount, errorCount);
-        
-        // 短暂延迟以显示进度
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      
-      progressManager.complete();
-      previewManager.isProcessing = false;
-      previewManager.updateBatchToolbar();
-      
-      // 更新撤回按钮状态（如果有成功的重命名操作）
-      if (successCount > 0 && undoManager) {
-        await undoManager.updateUndoButtonState();
-      }
-      
-      // 显示结果摘要
-      if (successCount > 0) {
-        showAlert(`重命名完成：${successCount} 个文件成功${errorCount > 0 ? `，${errorCount} 个文件失败` : ''}`,
-                  errorCount > 0 ? 'warning' : 'success');
-      } else {
-        showAlert('重命名失败，请检查文件权限或路径', 'danger');
-      }
-    }
-    
-    // 显示确认对话框
+// 显示确认对话框
     function showConfirmDialog(filesToRename) {
       return new Promise((resolve) => {
         const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
@@ -1392,171 +1462,6 @@
       }
     }
 
-    document.getElementById('select-files').addEventListener('click', async () => {
-      console.log('=== 按钮选择文件 ===');
-      
-      const files = await window.electronAPI.selectFiles();
-      console.log('按钮选择文件数量:', files ? files.length : 0);
-      
-      selectedFiles = files;
-      updateFileListDisplay(files);
-      
-      if (files && files.length > 0) {
-        // 自动填入视频名
-        autoFillVideoName(files);
-        showAlert(`成功选择 ${files.length} 个视频文件`, 'success');
-      }
-    });
-    
-    document.getElementById('clear-fields').addEventListener('click', async () => {
-      // 清空所有输入字段
-      fieldNames.forEach(fieldName => {
-        document.getElementById(fieldName).value = '';
-      });
-      showAlert('已清空所有字段', 'info');
-      
-      // 刷新预览
-      await previewManager.refreshPreview();
-    });
-    
-    document.getElementById('rename-files').addEventListener('click', async () => {
-      if (!selectedFiles || selectedFiles.length === 0) {
-        showAlert('请先选择文件！', 'danger');
-        return;
-      }
-      
-      const product = document.getElementById('product').value.trim();
-      const template = document.getElementById('template').value.trim();
-      const video = document.getElementById('video').value.trim();
-      const author = document.getElementById('author').value.trim();
-      const duration = document.getElementById('duration').value.trim();
-      const language = document.getElementById('language').value.trim();
-      
-      if (!product || !template || !video || !author || !duration) {
-        showAlert('请填写所有必填字段！', 'danger');
-        return;
-      }
-      
-      // 验证制作时长是否为有效数字
-      if (isNaN(parseFloat(duration)) || parseFloat(duration) <= 0) {
-        showAlert('制作时长必须是大于0的数字！', 'danger');
-        return;
-      }
-      
-      // 保存到历史记录
-      addToHistory('product', product);
-      addToHistory('template', template);
-      addToHistory('video', video);
-      addToHistory('author', author);
-      addToHistory('duration', duration);
-      if (language) {
-        addToHistory('language', language);
-      }
-      
-      const fields = { product, template, video, author, duration, language };
-      const options = { useNumberSuffix: true }; // 始终启用数字后缀序号
-      
-      console.log('=== 开始重命名操作 ===');
-      console.log('调用 renameFiles API，文件数量:', selectedFiles.length);
-      
-      const result = await window.electronAPI.renameFiles({ files: selectedFiles, fields, options });
-      
-      console.log('重命名操作完成，结果:', result);
-      
-      // 显示重命名结果
-      let html = '';
-      result.forEach(r => {
-        if (r.success) {
-          const suffixInfo = r.videoSuffix ? `（视频名添加后缀：${r.videoSuffix}）` : '（无后缀）';
-          html += `
-            <tr class="table-success">
-              <td class="preview-filename">${r.oldPath.split(/[/\\]/).pop()}</td>
-              <td class="preview-filename">${r.newPath.split(/[/\\]/).pop()}</td>
-              <td class="text-center">
-                <i class="bi bi-check-circle text-success" title="重命名成功 ${suffixInfo}"></i>
-              </td>
-            </tr>
-          `;
-        } else {
-          html += `
-            <tr class="table-danger">
-              <td class="preview-filename">${r.oldPath.split(/[/\\]/).pop()}</td>
-              <td class="preview-filename text-danger">重命名失败</td>
-              <td class="text-center">
-                <i class="bi bi-x-circle text-danger" title="错误：${r.error}"></i>
-              </td>
-            </tr>
-          `;
-        }
-      });
-      
-      // 更新预览表格显示结果
-      previewManager.previewTableBody.innerHTML = html;
-      
-      // 显示成功消息
-      const successCount = result.filter(r => r.success).length;
-      const failCount = result.filter(r => !r.success).length;
-      if (successCount > 0) {
-        showAlert(`重命名完成：${successCount} 个文件成功${failCount > 0 ? `，${failCount} 个文件失败` : ''}`,
-                  failCount > 0 ? 'warning' : 'success');
-        
-        // 修复：重命名成功后更新撤回按钮状态
-        console.log('重命名成功，更新撤回按钮状态');
-        if (undoManager) {
-          await undoManager.updateUndoButtonState();
-          console.log('撤回按钮状态已更新');
-        }
-      } else {
-        showAlert('重命名失败，请检查文件权限或路径', 'danger');
-      }
-      
-      // 清空选择的文件
-      selectedFiles = [];
-      previewData = [];
-    });
-
-    function showAlert(message, type) {
-      const alertDiv = document.createElement('div');
-      alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-      alertDiv.role = 'alert';
-      alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-      `;
-      
-      const container = document.querySelector('.container');
-      container.insertBefore(alertDiv, container.firstChild);
-      
-      // 自动关闭提示
-      setTimeout(() => {
-        const bsAlert = new bootstrap.Alert(alertDiv);
-        bsAlert.close();
-      }, 3000);
-    }
-    
-    // 添加表单字段变更监听器
-    function setupFormFieldListeners() {
-      // 防抖函数，避免频繁更新
-      let debounceTimer;
-      const debounceDelay = 500; // 500ms延迟
-      
-      function debouncedRefresh() {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          previewManager.refreshPreview();
-        }, debounceDelay);
-      }
-      
-      // 为所有表单字段添加监听器
-      fieldNames.forEach(fieldName => {
-        const field = document.getElementById(fieldName);
-        field.addEventListener('input', debouncedRefresh);
-        field.addEventListener('change', debouncedRefresh);
-      });
-      
-      // 复选框已移除，数字后缀序号始终启用
-    }
-    
     // 撤回功能管理器
     class UndoManager {
       constructor() {
@@ -1616,7 +1521,7 @@
           const status = await window.electronAPI.getUndoStatus();
           
           if (!status.canUndo) {
-            alert('没有可撤回的重命名操作');
+            showAlert('没有可撤回的重命名操作', 'info');
             return;
           }
           
@@ -1645,7 +1550,7 @@
           
         } catch (error) {
           console.error('显示撤回确认对话框失败:', error);
-          alert('获取撤回信息失败：' + error.message);
+          showAlert('获取撤回信息失败：' + error.message, 'danger');
         }
       }
       
@@ -1717,6 +1622,202 @@
         return html;
       }
     }
+// 事件监听器
+    document.getElementById('clear-fields').addEventListener('click', async () => {
+      // 清空所有输入字段
+      fieldNames.forEach(fieldName => {
+        document.getElementById(fieldName).value = '';
+      });
+      showAlert('已清空所有字段', 'info');
+      
+      // 刷新预览
+      await previewManager.refreshPreview();
+    });
+    
+    document.getElementById('rename-files').addEventListener('click', async () => {
+      if (!selectedFiles || selectedFiles.length === 0) {
+        showAlert('请先选择文件！', 'danger');
+        return;
+      }
+      
+      const product = document.getElementById('product').value.trim();
+      const template = document.getElementById('template').value.trim();
+      const video = document.getElementById('video').value.trim();
+      const author = document.getElementById('author').value.trim();
+      const duration = document.getElementById('duration').value.trim();
+      const language = document.getElementById('language').value.trim();
+      
+      if (!product || !template || !video || !author || !duration) {
+        showAlert('请填写所有必填字段！', 'danger');
+        return;
+      }
+      
+      // 验证制作时长是否为有效数字
+      if (isNaN(parseFloat(duration)) || parseFloat(duration) <= 0) {
+        showAlert('制作时长必须是大于0的数字！', 'danger');
+        return;
+      }
+      
+      // 保存到历史记录
+      addToHistory('product', product);
+      addToHistory('template', template);
+      addToHistory('video', video);
+      addToHistory('author', author);
+      addToHistory('duration', duration);
+      if (language) {
+        addToHistory('language', language);
+      }
+      
+      const fields = { product, template, video, author, duration, language };
+      const options = { useNumberSuffix: true }; // 始终启用数字后缀序号
+      
+      console.log('=== 开始重命名操作 ===');
+      console.log('调用 renameFiles API，文件数量:', selectedFiles.length);
+      
+      const result = await window.electronAPI.renameFiles({ files: selectedFiles, fields, options });
+      
+      console.log('重命名操作完成，结果:', result);
+      
+      // 显示重命名结果
+      let html = '';
+      result.forEach(r => {
+        if (r.success) {
+          const suffixInfo = r.videoSuffix ? `（视频名添加后缀：${r.videoSuffix}）` : '（无后缀）';
+          html += `
+            <tr class="table-success">
+              <td class="preview-filename">${r.oldPath.split(/[/\\]/).pop()}</td>
+              <td class="preview-filename">${r.newPath.split(/[/\\]/).pop()}</td>
+            </tr>
+          `;
+        } else {
+          html += `
+            <tr class="table-danger">
+              <td class="preview-filename">${r.oldPath.split(/[/\\]/).pop()}</td>
+              <td class="preview-filename text-danger">重命名失败</td>
+            </tr>
+          `;
+        }
+      });
+      
+      // 更新预览表格显示结果
+      previewManager.previewTableBody.innerHTML = html;
+      
+      // 显示成功消息
+      const successCount = result.filter(r => r.success).length;
+      const failCount = result.filter(r => !r.success).length;
+      if (successCount > 0) {
+        showAlert(`重命名完成：${successCount} 个文件成功${failCount > 0 ? `，${failCount} 个文件失败` : ''}`,
+                  failCount > 0 ? 'warning' : 'success');
+        
+        // 修复：重命名成功后更新撤回按钮状态
+        console.log('重命名成功，更新撤回按钮状态');
+        if (undoManager) {
+          await undoManager.updateUndoButtonState();
+          console.log('撤回按钮状态已更新');
+        }
+      } else {
+        showAlert('重命名失败，请检查文件权限或路径', 'danger');
+      }
+      
+      // 清空选择的文件
+      selectedFiles = [];
+      previewData = [];
+    });
+
+    function showAlert(message, type) {
+      // 创建Toast容器（如果不存在）
+      let toastContainer = document.getElementById('toast-container');
+      if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '9999';
+        document.body.appendChild(toastContainer);
+      }
+      
+      // 创建Toast元素
+      const toastId = 'toast-' + Date.now();
+      const toastDiv = document.createElement('div');
+      toastDiv.id = toastId;
+      toastDiv.className = 'toast align-items-center border-0';
+      toastDiv.role = 'alert';
+      toastDiv.setAttribute('aria-live', 'assertive');
+      toastDiv.setAttribute('aria-atomic', 'true');
+      
+      // 根据类型设置样式
+      let bgClass = '';
+      let iconClass = '';
+      switch (type) {
+        case 'success':
+          bgClass = 'text-bg-success';
+          iconClass = 'bi-check-circle-fill';
+          break;
+        case 'danger':
+          bgClass = 'text-bg-danger';
+          iconClass = 'bi-exclamation-triangle-fill';
+          break;
+        case 'warning':
+          bgClass = 'text-bg-warning';
+          iconClass = 'bi-exclamation-triangle-fill';
+          break;
+        case 'info':
+          bgClass = 'text-bg-info';
+          iconClass = 'bi-info-circle-fill';
+          break;
+        default:
+          bgClass = 'text-bg-primary';
+          iconClass = 'bi-info-circle-fill';
+      }
+      
+      toastDiv.classList.add(bgClass);
+      
+      toastDiv.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body d-flex align-items-center">
+            <i class="bi ${iconClass} me-2"></i>
+            ${message}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      `;
+      
+      // 添加到容器
+      toastContainer.appendChild(toastDiv);
+      
+      // 初始化并显示Toast
+      const toast = new bootstrap.Toast(toastDiv, {
+        autohide: true,
+        delay: 3000
+      });
+      
+      toast.show();
+      
+      // Toast隐藏后移除元素
+      toastDiv.addEventListener('hidden.bs.toast', () => {
+        toastDiv.remove();
+      });
+    }
+    
+    // 添加表单字段变更监听器
+    function setupFormFieldListeners() {
+      // 防抖函数，避免频繁更新
+      let debounceTimer;
+      const debounceDelay = 500; // 500ms延迟
+      
+      function debouncedRefresh() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          previewManager.refreshPreview();
+        }, debounceDelay);
+      }
+      
+      // 为所有表单字段添加监听器
+      fieldNames.forEach(fieldName => {
+        const field = document.getElementById(fieldName);
+        field.addEventListener('input', debouncedRefresh);
+        field.addEventListener('change', debouncedRefresh);
+      });
+    }
     
     // 添加新的事件监听器
     function setupNewEventListeners() {
@@ -1760,8 +1861,7 @@
         return new bootstrap.Tooltip(tooltipTriggerEl);
       });
       
-      console.log('预览界面简化完成：专注于文件名对比显示');
-      console.log('撤回功能初始化完成');
+      console.log('UI界面重构完成：紧凑布局，拖拽区域可点击选择文件');
     });
   </script>
 </body>
