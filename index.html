@@ -34,6 +34,62 @@
     .input-group .dropdown-toggle {
       border-left: none;
     }
+    
+    /* 拖拽区域样式 */
+    .drop-zone {
+      border: 2px dashed #dee2e6;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+      min-height: 200px;
+      position: relative;
+    }
+    
+    .drop-zone.drag-over {
+      border-color: #0d6efd;
+      background-color: rgba(13, 110, 253, 0.1);
+      border-style: solid;
+    }
+    
+    .drop-zone-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 2rem;
+      text-align: center;
+    }
+    
+    .drop-zone-icon {
+      font-size: 3rem;
+      color: #6c757d;
+      margin-bottom: 1rem;
+      transition: color 0.3s ease;
+    }
+    
+    .drop-zone.drag-over .drop-zone-icon {
+      color: #0d6efd;
+    }
+    
+    .drop-zone-text {
+      color: #6c757d;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .drop-zone.drag-over .drop-zone-text {
+      color: #0d6efd;
+      font-weight: 500;
+    }
+    
+    .drop-zone-hint {
+      color: #adb5bd;
+      font-size: 0.9rem;
+    }
+    
+    .drop-zone.drag-over .drop-zone-hint {
+      color: #0d6efd;
+    }
   </style>
 </head>
 <body>
@@ -154,10 +210,14 @@
             <h5 class="card-title mb-0">文件列表</h5>
           </div>
           <div class="card-body">
-            <div id="file-list" class="overflow-auto" style="max-height: 400px;">
-              <div class="text-muted text-center py-5">
-                <i class="bi bi-file-earmark-x fs-1 d-block mb-3"></i>
-                尚未选择文件
+            <div id="file-list" class="overflow-auto drop-zone" style="max-height: 400px;">
+              <div class="drop-zone-content">
+                <i class="bi bi-cloud-upload drop-zone-icon"></i>
+                <div class="drop-zone-text">拖拽视频文件到此处</div>
+                <div class="drop-zone-hint">或点击"选择文件"按钮</div>
+                <div class="drop-zone-hint mt-2">
+                  <small>支持格式：MP4、MOV、AVI、MKV、FLV、WMV、WEBM</small>
+                </div>
               </div>
             </div>
           </div>
@@ -179,6 +239,9 @@
   <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     let selectedFiles = [];
+    
+    // 支持的视频文件扩展名
+    const SUPPORTED_VIDEO_EXTENSIONS = ['mp4', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'webm'];
     
     // 历史记录管理
     const STORAGE_KEY = 'renameToolHistory';
@@ -286,6 +349,143 @@
       });
     }
     
+    // 更新文件列表显示
+    function updateFileListDisplay(files) {
+      const fileListDiv = document.getElementById('file-list');
+      
+      if (files && files.length > 0) {
+        let html = '<ul class="list-group">';
+        files.forEach(f => {
+          html += `<li class="list-group-item list-group-item-action file-item">${f}</li>`;
+        });
+        html += '</ul>';
+        fileListDiv.innerHTML = html;
+        fileListDiv.classList.remove('drop-zone');
+      } else {
+        fileListDiv.innerHTML = `
+          <div class="drop-zone-content">
+            <i class="bi bi-cloud-upload drop-zone-icon"></i>
+            <div class="drop-zone-text">拖拽视频文件到此处</div>
+            <div class="drop-zone-hint">或点击"选择文件"按钮</div>
+            <div class="drop-zone-hint mt-2">
+              <small>支持格式：MP4、MOV、AVI、MKV、FLV、WMV、WEBM</small>
+            </div>
+          </div>
+        `;
+        fileListDiv.classList.add('drop-zone');
+      }
+    }
+    
+    // 拖拽事件处理
+    function setupDragAndDrop() {
+      const fileListDiv = document.getElementById('file-list');
+      
+      // 阻止默认拖拽行为
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        fileListDiv.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+      });
+      
+      // 高亮拖拽区域
+      ['dragenter', 'dragover'].forEach(eventName => {
+        fileListDiv.addEventListener(eventName, highlight, false);
+      });
+      
+      // 取消高亮
+      ['dragleave', 'drop'].forEach(eventName => {
+        fileListDiv.addEventListener(eventName, unhighlight, false);
+      });
+      
+      // 处理文件拖拽
+      fileListDiv.addEventListener('drop', handleDrop, false);
+      
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
+      function highlight(e) {
+        fileListDiv.classList.add('drag-over');
+      }
+      
+      function unhighlight(e) {
+        fileListDiv.classList.remove('drag-over');
+      }
+      
+      function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        handleFiles(files);
+      }
+      
+      async function handleFiles(files) {
+        const fileArray = Array.from(files);
+        
+        console.log('=== 拖拽文件处理 ===');
+        console.log('拖拽文件数量:', fileArray.length);
+        
+        // 修复：使用 Electron 的 webUtils.getPathForFile() 获取拖拽文件路径
+        const filePaths = [];
+        
+        for (let i = 0; i < fileArray.length; i++) {
+          const file = fileArray[i];
+          let filePath = file.path;
+          
+          // 如果 path 为 undefined，使用 webUtils.getPathForFile() 获取路径
+          if (!filePath && window.electronAPI && window.electronAPI.getPathForFile) {
+            try {
+              filePath = await window.electronAPI.getPathForFile(file);
+              console.log(`文件 ${i + 1}: ${file.name} -> 路径获取成功`);
+            } catch (error) {
+              console.log(`文件 ${i + 1}: ${file.name} -> 路径获取失败:`, error);
+            }
+          }
+          
+          if (filePath) {
+            filePaths.push(filePath);
+          } else {
+            console.log(`文件 ${i + 1}: ${file.name} -> 无法获取路径`);
+          }
+        }
+        
+        if (filePaths.length === 0) {
+          showAlert('无法获取拖拽文件的路径，请使用"选择文件"按钮', 'danger');
+          return;
+        }
+        
+        try {
+          const { validFiles, invalidFiles } = await window.electronAPI.validateVideoFiles(filePaths);
+          
+          if (validFiles.length > 0) {
+            selectedFiles = validFiles;
+            updateFileListDisplay(validFiles);
+            
+            if (invalidFiles.length > 0) {
+              const invalidNames = invalidFiles.map(path => path.split(/[/\\]/).pop());
+              showAlert(
+                `成功添加 ${validFiles.length} 个视频文件。忽略了 ${invalidFiles.length} 个不支持的文件：${invalidNames.join(', ')}`,
+                'warning'
+              );
+            } else {
+              showAlert(`成功添加 ${validFiles.length} 个视频文件`, 'success');
+            }
+          } else {
+            if (invalidFiles.length > 0) {
+              const invalidNames = invalidFiles.map(path => path.split(/[/\\]/).pop());
+              showAlert(
+                `不支持的文件格式：${invalidNames.join(', ')}。请选择视频文件（${SUPPORTED_VIDEO_EXTENSIONS.join(', ')}）`,
+                'danger'
+              );
+            }
+          }
+        } catch (error) {
+          console.error('文件验证失败:', error);
+          showAlert('文件验证失败，请重试', 'danger');
+        }
+      }
+    }
+    
     // 初始化所有下拉菜单并填充默认值
     function initializeDropdowns() {
       const history = getHistory();
@@ -301,23 +501,16 @@
       });
     }
     document.getElementById('select-files').addEventListener('click', async () => {
+      console.log('=== 按钮选择文件 ===');
+      
       const files = await window.electronAPI.selectFiles();
+      console.log('按钮选择文件数量:', files ? files.length : 0);
+      
       selectedFiles = files;
-      const fileListDiv = document.getElementById('file-list');
+      updateFileListDisplay(files);
+      
       if (files && files.length > 0) {
-        let html = '<ul class="list-group">';
-        files.forEach(f => {
-          html += `<li class="list-group-item list-group-item-action file-item">${f}</li>`;
-        });
-        html += '</ul>';
-        fileListDiv.innerHTML = html;
-      } else {
-        fileListDiv.innerHTML = `
-          <div class="text-muted text-center py-5">
-            <i class="bi bi-file-earmark-x fs-1 d-block mb-3"></i>
-            未选择文件
-          </div>
-        `;
+        showAlert(`成功选择 ${files.length} 个视频文件`, 'success');
       }
     });
     
@@ -418,6 +611,7 @@
     // 页面加载完成后初始化
     document.addEventListener('DOMContentLoaded', function() {
       initializeDropdowns();
+      setupDragAndDrop();
     });
   </script>
 </body>

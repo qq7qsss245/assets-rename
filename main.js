@@ -105,3 +105,34 @@ ipcMain.handle('select-files', async () => {
 ipcMain.handle('rename-files', async (event, data) => {
   return await renameFiles(data.files, data.fields, data.options);
 });
+
+ipcMain.handle('validate-video-files', async (event, filePaths) => {
+  const supportedExtensions = ['mp4', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'webm'];
+  const validFiles = [];
+  const invalidFiles = [];
+  
+  console.log('=== 文件验证 ===');
+  console.log('接收到文件数量:', filePaths.length);
+  
+  filePaths.forEach((filePath, index) => {
+    if (!filePath || filePath.trim() === '') {
+      console.log(`文件 ${index + 1}: 路径为空 -> 无效`);
+      invalidFiles.push(filePath);
+      return;
+    }
+    
+    const extension = path.extname(filePath).toLowerCase().slice(1);
+    const fileExists = fs.existsSync(filePath);
+    
+    if (supportedExtensions.includes(extension) && fileExists) {
+      console.log(`文件 ${index + 1}: ${path.basename(filePath)} -> 有效`);
+      validFiles.push(filePath);
+    } else {
+      console.log(`文件 ${index + 1}: ${path.basename(filePath)} -> 无效 (扩展名:${extension}, 存在:${fileExists})`);
+      invalidFiles.push(filePath);
+    }
+  });
+  
+  console.log(`验证结果: ${validFiles.length} 有效, ${invalidFiles.length} 无效`);
+  return { validFiles, invalidFiles };
+});
