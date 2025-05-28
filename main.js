@@ -2,7 +2,7 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { selectFiles } = require('./fileSelector');
-const { renameFiles } = require('./fileRenamer');
+const { renameFiles, getVideoSize, getVideoDuration, extractLanguageCode, getNearestRatio, buildName, getTodayStr } = require('./fileRenamer');
 const ffmpeg = require('fluent-ffmpeg');
 const ffprobeStatic = require('ffprobe-static');
 
@@ -135,4 +135,131 @@ ipcMain.handle('validate-video-files', async (event, filePaths) => {
   
   console.log(`验证结果: ${validFiles.length} 有效, ${invalidFiles.length} 无效`);
   return { validFiles, invalidFiles };
+});
+
+// 获取文件元数据的IPC处理程序
+ipcMain.handle('get-file-metadata', async (event, data) => {
+  const { filePaths, fields } = data;
+  const results = [];
+  
+  console.log('=== 获取文件元数据 ===');
+  console.log('文件数量:', filePaths.length);
+  
+  for (let i = 0; i < filePaths.length; i++) {
+    const filePath = filePaths[i];
+    const ext = path.extname(filePath);
+    
+    try {
+      // 获取视频尺寸
+      const { width, height } = await getVideoSize(filePath);
+      const ratio = getNearestRatio(width, height);
+      
+      // 获取视频时长
+      const videoDuration = await getVideoDuration(filePath) || "unknown";
+      
+      // 从文件名中提取语言代码
+      const languageCode = extractLanguageCode(filePath) || "unknown";
+      
+      // 生成预览文件名（不带后缀）
+      const previewName = buildName(fields, ext, ratio, languageCode, videoDuration, '');
+      
+      results.push({
+        originalPath: filePath,
+        originalName: path.basename(filePath),
+        previewName: previewName,
+        width,
+        height,
+        ratio,
+        videoDuration,
+        languageCode,
+        success: true
+      });
+      
+      console.log(`文件 ${i + 1}: ${path.basename(filePath)} -> 元数据获取成功`);
+    } catch (error) {
+      console.error(`文件 ${i + 1}: ${path.basename(filePath)} -> 元数据获取失败:`, error);
+      results.push({
+        originalPath: filePath,
+        originalName: path.basename(filePath),
+        previewName: '无法生成预览',
+        error: error.message,
+        success: false
+      });
+    }
+  }
+  
+  console.log(`元数据获取完成: ${results.filter(r => r.success).length} 成功, ${results.filter(r => !r.success).length} 失败`);
+  return results;
+});
+
+// 批量重命名文件的IPC处理程序
+ipcMain.handle('batch-rename-files', async (event, data) => {
+  const { files, fields, options } = data;
+  console.log('=== 批量重命名文件 ===');
+  console.log('文件数量:', files.length);
+  
+  try {
+    const results = await renameFiles(files, fields, options);
+    console.log(`批量重命名完成: ${results.filter(r => r.success).length} 成功, ${results.filter(r => !r.success).length} 失败`);
+    return results;
+  } catch (error) {
+    console.error('批量重命名失败:', error);
+    throw error;
+  }
+});
+
+// 检测文件名冲突的IPC处理程序
+ipcMain.handle('detect-filename-conflicts', async (event, data) => {
+  const { filePaths, fields } = data;
+  console.log('=== 检测文件名冲突 ===');
+  console.log('文件数量:', filePaths.length);
+  
+  const conflicts = new Map();
+  const nameMap = new Map();
+  
+  try {
+    for (let i = 0; i < filePaths.length; i++) {
+      const filePath = filePaths[i];
+      const ext = path.extname(filePath);
+      
+      // 获取视频尺寸
+      const { width, height } = await getVideoSize(filePath);
+      const ratio = getNearestRatio(width, height);
+      
+      // 获取视频时长
+      const videoDuration = await getVideoDuration(filePath) || "unknown";
+      
+      // 从文件名中提取语言代码
+      const languageCode = extractLanguageCode(filePath) || "unknown";
+      
+      // 生成预览文件名（不带后缀）
+      const previewName = buildName(fields, ext, ratio, languageCode, videoDuration, '');
+      
+      if (!nameMap.has(previewName)) {
+        nameMap.set(previewName, []);
+      }
+      nameMap.get(previewName).push({
+        index: i,
+        originalPath: filePath,
+        originalName: path.basename(filePath),
+        previewName
+      });
+    }
+    
+    // 找出冲突的文件名
+    nameMap.forEach((files, name) => {
+      if (files.length > 1) {
+        conflicts.set(name, files);
+      }
+    });
+    
+    console.log(`冲突检测完成: 发现 ${conflicts.size} 个冲突组`);
+    return Array.from(conflicts.entries()).map(([name, files]) => ({
+      conflictName: name,
+      files: files
+    }));
+  } catch (error) {
+    console.error('冲突检测失败:', error);
+    throw error;
+  }
 });

@@ -3,7 +3,10 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
   selectFiles: () => ipcRenderer.invoke('select-files'),
   renameFiles: (data) => ipcRenderer.invoke('rename-files', data),
+  batchRenameFiles: (data) => ipcRenderer.invoke('batch-rename-files', data),
   validateVideoFiles: (filePaths) => ipcRenderer.invoke('validate-video-files', filePaths),
+  getFileMetadata: (data) => ipcRenderer.invoke('get-file-metadata', data),
+  detectFilenameConflicts: (data) => ipcRenderer.invoke('detect-filename-conflicts', data),
   getPathForFile: (file) => {
     try {
       // 使用 Electron 的 webUtils.getPathForFile 获取拖拽文件的真实路径

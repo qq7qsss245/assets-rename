@@ -186,4 +186,12 @@ async function renameFiles(filePaths, fields, options = {}) {
   return results;
 }
 
-module.exports = { renameFiles };
+module.exports = {
+  renameFiles,
+  getVideoSize,
+  getVideoDuration,
+  extractLanguageCode,
+  getNearestRatio,
+  buildName,
+  getTodayStr
+};
