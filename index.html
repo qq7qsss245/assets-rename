@@ -734,16 +734,7 @@
     
     // 获取历史记录
     function getHistory() {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch (e) {
-          console.error('Failed to parse history data:', e);
-        }
-      }
-      // 返回默认结构
-      return {
+      const defaultHistory = {
         product: [],
         template: [],
         video: [],
@@ -751,6 +742,25 @@
         duration: [],
         language: []
       };
+      
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          // 确保所有字段都存在，向后兼容旧版本数据
+          const history = { ...defaultHistory };
+          for (const fieldName of fieldNames) {
+            if (parsed[fieldName] && Array.isArray(parsed[fieldName])) {
+              history[fieldName] = parsed[fieldName];
+            }
+          }
+          return history;
+        } catch (e) {
+          console.error('Failed to parse history data:', e);
+        }
+      }
+      // 返回默认结构
+      return defaultHistory;
     }
     
     // 保存历史记录
@@ -766,8 +776,22 @@
     function addToHistory(fieldName, value) {
       if (!value || !value.trim()) return;
       
+      // 验证字段名是否有效
+      if (!fieldNames.includes(fieldName)) {
+        console.warn('Invalid field name for history:', fieldName);
+        return;
+      }
+      
+      console.log(`Adding to history - Field: ${fieldName}, Value: ${value}`);
+      
       const history = getHistory();
       const trimmedValue = value.trim();
+      
+      // 确保字段存在且为数组
+      if (!history[fieldName] || !Array.isArray(history[fieldName])) {
+        console.log(`Initializing history array for field: ${fieldName}`);
+        history[fieldName] = [];
+      }
       
       // 如果已存在，先移除再添加到开头
       const index = history[fieldName].indexOf(trimmedValue);
@@ -783,13 +807,27 @@
         history[fieldName] = history[fieldName].slice(0, 20);
       }
       
+      console.log(`History updated for ${fieldName}:`, history[fieldName]);
+      
       saveHistory(history);
       updateDropdown(fieldName);
     }
     
     // 从历史记录中删除
     function removeFromHistory(fieldName, value) {
+      // 验证字段名是否有效
+      if (!fieldNames.includes(fieldName)) {
+        console.warn('Invalid field name for history:', fieldName);
+        return;
+      }
+      
       const history = getHistory();
+      
+      // 确保字段存在且为数组
+      if (!history[fieldName] || !Array.isArray(history[fieldName])) {
+        return;
+      }
+      
       const index = history[fieldName].indexOf(value);
       if (index > -1) {
         history[fieldName].splice(index, 1);
@@ -800,8 +838,21 @@
     
     // 更新下拉菜单
     function updateDropdown(fieldName) {
+      // 验证字段名是否有效
+      if (!fieldNames.includes(fieldName)) {
+        console.warn('Invalid field name for dropdown:', fieldName);
+        return;
+      }
+      
       const history = getHistory();
       const dropdown = document.getElementById(`${fieldName}-dropdown`);
+      
+      // 检查下拉菜单元素是否存在
+      if (!dropdown) {
+        console.warn('Dropdown element not found:', `${fieldName}-dropdown`);
+        return;
+      }
+      
       const items = history[fieldName] || [];
       
       dropdown.innerHTML = '';
@@ -1405,7 +1456,12 @@
       const fields = { product, template, video, author, duration, language };
       const options = { useNumberSuffix: true }; // 始终启用数字后缀序号
       
+      console.log('=== 开始重命名操作 ===');
+      console.log('调用 renameFiles API，文件数量:', selectedFiles.length);
+      
       const result = await window.electronAPI.renameFiles({ files: selectedFiles, fields, options });
+      
+      console.log('重命名操作完成，结果:', result);
       
       // 显示重命名结果
       let html = '';
@@ -1443,6 +1499,13 @@
       if (successCount > 0) {
         showAlert(`重命名完成：${successCount} 个文件成功${failCount > 0 ? `，${failCount} 个文件失败` : ''}`,
                   failCount > 0 ? 'warning' : 'success');
+        
+        // 修复：重命名成功后更新撤回按钮状态
+        console.log('重命名成功，更新撤回按钮状态');
+        if (undoManager) {
+          await undoManager.updateUndoButtonState();
+          console.log('撤回按钮状态已更新');
+        }
       } else {
         showAlert('重命名失败，请检查文件权限或路径', 'danger');
       }
@@ -1497,7 +1560,9 @@
     // 撤回功能管理器
     class UndoManager {
       constructor() {
+        console.log('=== 初始化撤回管理器 ===');
         this.undoButton = document.getElementById('undo-rename');
+        console.log('撤回按钮元素:', this.undoButton);
         this.setupEventListeners();
         this.updateUndoButtonState();
       }
@@ -1505,6 +1570,9 @@
       setupEventListeners() {
         // 撤回按钮点击事件
         this.undoButton.addEventListener('click', () => {
+          console.log('=== 撤回按钮被点击 ===');
+          console.log('按钮状态 - disabled:', this.undoButton.disabled);
+          console.log('按钮标题:', this.undoButton.title);
           this.showUndoConfirmDialog();
         });
         
@@ -1523,14 +1591,19 @@
       }
       
       async updateUndoButtonState() {
+        console.log('=== 更新撤回按钮状态 ===');
         try {
           const status = await window.electronAPI.getUndoStatus();
+          console.log('撤回状态:', status);
+          
           this.undoButton.disabled = !status.canUndo;
           
           if (status.canUndo) {
             this.undoButton.title = status.message;
+            console.log('撤回按钮已启用:', status.message);
           } else {
             this.undoButton.title = '没有可撤回的操作';
+            console.log('撤回按钮已禁用: 没有可撤回的操作');
           }
         } catch (error) {
           console.error('获取撤回状态失败:', error);
@@ -1668,6 +1741,8 @@
     
     // 页面加载完成后初始化
     document.addEventListener('DOMContentLoaded', function() {
+      console.log('=== DOM 内容加载完成，开始初始化 ===');
+      
       initializeDropdowns();
       setupDragAndDrop();
       setupFormFieldListeners();
@@ -1675,7 +1750,9 @@
       progressManager.init();
       
       // 初始化撤回管理器
+      console.log('准备初始化撤回管理器...');
       undoManager = new UndoManager();
+      console.log('撤回管理器初始化完成');
       
       // 初始化工具提示
       const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));

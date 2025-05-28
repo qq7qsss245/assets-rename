@@ -221,6 +221,18 @@ async function renameFiles(filePaths, fields, options = {}) {
       operations: successfulRenames,
       totalCount: successfulRenames.length
     };
+    console.log('=== 撤回数据已保存 ===');
+    console.log('成功重命名文件数量:', successfulRenames.length);
+    console.log('撤回数据时间戳:', lastRenameOperation.timestamp);
+    console.log('撤回数据结构验证:', {
+      hasOperations: !!lastRenameOperation.operations,
+      operationsLength: lastRenameOperation.operations.length,
+      hasTimestamp: !!lastRenameOperation.timestamp,
+      hasTotalCount: !!lastRenameOperation.totalCount
+    });
+  } else {
+    console.log('=== 没有成功的重命名操作，不保存撤回数据 ===');
+    lastRenameOperation = null; // 确保清空之前的撤回数据
   }
   
   return results;
@@ -231,10 +243,29 @@ async function renameFiles(filePaths, fields, options = {}) {
  * @returns {Promise<Object>} 撤回结果
  */
 async function undoLastRename() {
+  console.log('=== 开始撤回操作 ===');
+  console.log('lastRenameOperation 状态:', lastRenameOperation ? '存在' : 'null');
+  
   if (!lastRenameOperation) {
+    console.log('撤回失败: lastRenameOperation 为 null');
     return {
       success: false,
       error: '没有可撤回的重命名操作',
+      results: []
+    };
+  }
+  
+  console.log('lastRenameOperation 结构:', {
+    timestamp: lastRenameOperation.timestamp,
+    totalCount: lastRenameOperation.totalCount,
+    operationsLength: lastRenameOperation.operations ? lastRenameOperation.operations.length : 'operations为null'
+  });
+  
+  if (!lastRenameOperation.operations) {
+    console.log('撤回失败: lastRenameOperation.operations 为 null');
+    return {
+      success: false,
+      error: '撤回数据结构异常：operations 为空',
       results: []
     };
   }
@@ -243,8 +274,15 @@ async function undoLastRename() {
   let successCount = 0;
   let errorCount = 0;
   
+  // 保存原始数据的引用，避免在处理过程中被修改
+  const operationsToUndo = [...lastRenameOperation.operations];
+  const originalTimestamp = lastRenameOperation.timestamp;
+  const originalTotalCount = lastRenameOperation.totalCount;
+  
+  console.log('准备撤回', operationsToUndo.length, '个操作');
+  
   // 逐个撤回重命名操作
-  for (const operation of lastRenameOperation.operations) {
+  for (const operation of operationsToUndo) {
     const { oldPath, newPath } = operation;
     
     try {
@@ -294,16 +332,25 @@ async function undoLastRename() {
   
   // 如果所有操作都成功，清除撤回数据
   if (errorCount === 0) {
+    console.log('所有撤回操作成功，清除撤回数据');
     lastRenameOperation = null;
+  } else {
+    console.log('部分撤回操作失败，保留撤回数据');
   }
+  
+  console.log('撤回操作完成:', {
+    successCount,
+    errorCount,
+    totalCount: originalTotalCount
+  });
   
   return {
     success: successCount > 0,
-    totalCount: lastRenameOperation.operations.length,
+    totalCount: originalTotalCount,
     successCount,
     errorCount,
     results,
-    timestamp: lastRenameOperation.timestamp
+    timestamp: originalTimestamp
   };
 }
 
@@ -312,13 +359,18 @@ async function undoLastRename() {
  * @returns {Object} 撤回状态信息
  */
 function getUndoStatus() {
+  console.log('=== 检查撤回状态 ===');
+  console.log('lastRenameOperation 存在:', !!lastRenameOperation);
+  
   if (!lastRenameOperation) {
+    console.log('返回状态: 无可撤回操作');
     return {
       canUndo: false,
       message: '没有可撤回的操作'
     };
   }
   
+  console.log('返回状态: 可撤回', lastRenameOperation.totalCount, '个文件');
   return {
     canUndo: true,
     timestamp: lastRenameOperation.timestamp,

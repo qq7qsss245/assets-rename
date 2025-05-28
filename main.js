@@ -266,15 +266,25 @@ ipcMain.handle('detect-filename-conflicts', async (event, data) => {
 
 // 撤回最后一次重命名操作的IPC处理程序
 ipcMain.handle('undo-last-rename', async (event) => {
-  console.log('=== 撤回最后一次重命名操作 ===');
+  console.log('=== IPC: 收到撤回请求 ===');
   
   try {
     const result = await undoLastRename();
-    console.log(`撤回操作完成: ${result.successCount} 成功, ${result.errorCount} 失败`);
+    console.log(`IPC: 撤回操作完成: ${result.successCount} 成功, ${result.errorCount} 失败`);
     return result;
   } catch (error) {
-    console.error('撤回操作失败:', error);
-    throw error;
+    console.error('IPC: 撤回操作失败:', error);
+    console.error('错误堆栈:', error.stack);
+    
+    // 返回结构化的错误信息而不是抛出异常
+    return {
+      success: false,
+      error: `撤回操作失败: ${error.message}`,
+      errorType: error.name,
+      successCount: 0,
+      errorCount: 0,
+      results: []
+    };
   }
 });
 
