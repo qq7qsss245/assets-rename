@@ -7,6 +7,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   validateVideoFiles: (filePaths) => ipcRenderer.invoke('validate-video-files', filePaths),
   getFileMetadata: (data) => ipcRenderer.invoke('get-file-metadata', data),
   detectFilenameConflicts: (data) => ipcRenderer.invoke('detect-filename-conflicts', data),
+  undoLastRename: () => ipcRenderer.invoke('undo-last-rename'),
+  getUndoStatus: () => ipcRenderer.invoke('get-undo-status'),
+  clearUndoData: () => ipcRenderer.invoke('clear-undo-data'),
   getPathForFile: (file) => {
     try {
       // 使用 Electron 的 webUtils.getPathForFile 获取拖拽文件的真实路径

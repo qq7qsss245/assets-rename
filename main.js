@@ -2,7 +2,7 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { selectFiles } = require('./fileSelector');
-const { renameFiles, getVideoSize, getVideoDuration, extractLanguageCode, getNearestRatio, buildName, getTodayStr } = require('./fileRenamer');
+const { renameFiles, undoLastRename, getUndoStatus, clearUndoData, getVideoSize, getVideoDuration, extractLanguageCode, extractVideoName, getNearestRatio, buildName, getTodayStr, determineFinalLanguage } = require('./fileRenamer');
 const ffmpeg = require('fluent-ffmpeg');
 const ffprobeStatic = require('ffprobe-static');
 
@@ -157,11 +157,11 @@ ipcMain.handle('get-file-metadata', async (event, data) => {
       // 获取视频时长
       const videoDuration = await getVideoDuration(filePath) || "unknown";
       
-      // 从文件名中提取语言代码
-      const languageCode = extractLanguageCode(filePath) || "unknown";
+      // 使用新的语言优先级逻辑：用户输入 > 文件名识别 > 默认值
+      const finalLanguage = determineFinalLanguage(fields.language, filePath);
       
       // 生成预览文件名（不带后缀）
-      const previewName = buildName(fields, ext, ratio, languageCode, videoDuration, '');
+      const previewName = buildName(fields, ext, ratio, finalLanguage, videoDuration, '');
       
       results.push({
         originalPath: filePath,
@@ -171,7 +171,7 @@ ipcMain.handle('get-file-metadata', async (event, data) => {
         height,
         ratio,
         videoDuration,
-        languageCode,
+        languageCode: finalLanguage,
         success: true
       });
       
@@ -262,4 +262,30 @@ ipcMain.handle('detect-filename-conflicts', async (event, data) => {
     console.error('冲突检测失败:', error);
     throw error;
   }
+});
+
+// 撤回最后一次重命名操作的IPC处理程序
+ipcMain.handle('undo-last-rename', async (event) => {
+  console.log('=== 撤回最后一次重命名操作 ===');
+  
+  try {
+    const result = await undoLastRename();
+    console.log(`撤回操作完成: ${result.successCount} 成功, ${result.errorCount} 失败`);
+    return result;
+  } catch (error) {
+    console.error('撤回操作失败:', error);
+    throw error;
+  }
+});
+
+// 获取撤回状态的IPC处理程序
+ipcMain.handle('get-undo-status', async (event) => {
+  return getUndoStatus();
+});
+
+// 清除撤回数据的IPC处理程序
+ipcMain.handle('clear-undo-data', async (event) => {
+  clearUndoData();
+  console.log('撤回数据已清除');
+  return { success: true };
 });

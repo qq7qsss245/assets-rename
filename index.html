@@ -139,10 +139,6 @@
       color: #fd7e14;
     }
     
-    /* 文件行选中状态 */
-    .file-row-selected {
-      background-color: rgba(13, 110, 253, 0.1) !important;
-    }
     
     /* 字段验证状态 */
     .field-valid {
@@ -168,22 +164,7 @@
       text-align: left;
     }
     
-    /* 批量操作工具栏 */
-    #batch-toolbar {
-      border: 1px solid #dee2e6;
-      transition: all 0.3s ease;
-    }
     
-    #batch-toolbar.show {
-      display: flex !important;
-    }
-    
-    /* 文件名冲突高亮 */
-    .conflict-highlight {
-      background-color: rgba(255, 193, 7, 0.2);
-      border-left: 3px solid #ffc107;
-      padding-left: 8px;
-    }
     
     /* 加载动画 */
     .loading-spinner {
@@ -205,20 +186,6 @@
     @media (max-width: 768px) {
       .preview-filename {
         font-size: 0.75rem;
-      }
-      
-      .btn-group .btn {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.75rem;
-      }
-      
-      #batch-toolbar {
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-      
-      #batch-toolbar .d-flex {
-        justify-content: center;
       }
     }
   </style>
@@ -305,17 +272,19 @@
                 <div class="form-text">请输入制作该视频所花费的时间（小时）</div>
               </div>
               <div class="mb-3">
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="useNumberSuffix">
-                  <label class="form-check-label" for="useNumberSuffix">
-                    启用数字后缀序号（重名时添加2、3、4等后缀）
-                  </label>
+                <label for="language" class="form-label">语言（可选）：</label>
+                <div class="input-group">
+                  <input type="text" class="form-control" id="language" placeholder="如：en、zh、ja等">
+                  <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="language" aria-expanded="false">
+                    <i class="bi bi-clock-history"></i>
+                  </button>
+                  <ul class="dropdown-menu" id="language-dropdown">
+                    <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
+                  </ul>
                 </div>
-                <small class="form-text text-muted">
-                  勾选：Test → Test2、Test3、Test4<br>
-                  不勾选：Test → Test(1)、Test(2)、Test(3)
-                </small>
+                <div class="form-text">手动指定语言代码，将覆盖从文件名自动识别的语言</div>
               </div>
+              <!-- 移除"启用数字后缀序号"选项，改为自动处理 -->
             </form>
           </div>
           <div class="card-footer">
@@ -329,6 +298,9 @@
               <button id="rename-files" class="btn btn-success">
                 <i class="bi bi-check-circle me-2"></i>确认重命名
               </button>
+              <button id="undo-rename" class="btn btn-warning" disabled>
+                <i class="bi bi-arrow-counterclockwise me-2"></i>撤回重命名
+              </button>
             </div>
           </div>
         </div>
@@ -337,19 +309,8 @@
       <!-- 右侧预览界面区域 -->
       <div class="col-md-7">
         <div class="card shadow-sm">
-          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <div class="card-header bg-light">
             <h5 class="card-title mb-0">重命名预览</h5>
-            <div class="btn-group" role="group" id="preview-controls" style="display: none;">
-              <button type="button" class="btn btn-sm btn-outline-primary" id="refresh-preview" title="刷新预览">
-                <i class="bi bi-arrow-clockwise"></i>
-              </button>
-              <button type="button" class="btn btn-sm btn-outline-secondary" id="select-all" title="全选">
-                <i class="bi bi-check-square"></i>
-              </button>
-              <button type="button" class="btn btn-sm btn-outline-secondary" id="deselect-all" title="取消全选">
-                <i class="bi bi-square"></i>
-              </button>
-            </div>
           </div>
           <div class="card-body">
             <div id="preview-container" class="overflow-auto" style="max-height: 400px;">
@@ -371,13 +332,8 @@
                   <table class="table table-striped table-hover">
                     <thead class="table-dark">
                       <tr>
-                        <th style="width: 5%">
-                          <input type="checkbox" class="form-check-input" id="select-all-checkbox" title="全选/取消全选">
-                        </th>
-                        <th style="width: 40%">原文件名</th>
-                        <th style="width: 40%">预览新文件名</th>
-                        <th style="width: 10%">状态</th>
-                        <th style="width: 5%">操作</th>
+                        <th style="width: 50%">原文件名</th>
+                        <th style="width: 50%">预览新文件名</th>
                       </tr>
                     </thead>
                     <tbody id="preview-table-body">
@@ -386,23 +342,6 @@
                   </table>
                 </div>
                 
-                <!-- 批量操作工具栏 -->
-                <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-light rounded" id="batch-toolbar" style="display: none !important;">
-                  <div class="d-flex align-items-center">
-                    <span class="text-muted me-3">已选择 <span id="selected-count">0</span> 个文件</span>
-                    <div class="btn-group btn-group-sm" role="group">
-                      <button type="button" class="btn btn-outline-success" id="batch-rename" disabled>
-                        <i class="bi bi-check-circle me-1"></i>重命名选中文件
-                      </button>
-                      <button type="button" class="btn btn-outline-warning" id="batch-retry" disabled>
-                        <i class="bi bi-arrow-clockwise me-1"></i>重试失败文件
-                      </button>
-                    </div>
-                  </div>
-                  <div class="text-muted small">
-                    <span id="status-summary"></span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -414,7 +353,7 @@
     <div class="row mt-4">
       <div class="col-12">
         <div class="alert alert-info">
-          <small>第二阶段功能：批量操作、状态管理、进度显示、错误处理优化已完成。</small>
+          <small>预览界面已简化：专注于文件名对比显示，提供更清晰的用户体验。</small>
         </div>
       </div>
     </div>
@@ -564,6 +503,79 @@
     </div>
   </div>
 
+  <!-- 撤回确认对话框 -->
+  <div class="modal fade" id="undoConfirmModal" tabindex="-1" aria-labelledby="undoConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="undoConfirmModalLabel">
+            <i class="bi bi-arrow-counterclockwise me-2"></i>确认撤回操作
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>注意：</strong>此操作将撤回最后一次批量重命名，将所有文件恢复到重命名前的状态。
+          </div>
+          <div id="undo-details">
+            <!-- 撤回详情将在这里显示 -->
+          </div>
+          <div class="mt-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="confirm-undo-checkbox">
+              <label class="form-check-label" for="confirm-undo-checkbox">
+                我确认要撤回这些重命名操作
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="button" class="btn btn-warning" id="confirm-undo-btn" disabled>
+            <i class="bi bi-arrow-counterclockwise me-1"></i>确认撤回
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 撤回进度对话框 -->
+  <div class="modal fade" id="undoProgressModal" tabindex="-1" aria-labelledby="undoProgressModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="undoProgressModalLabel">
+            <i class="bi bi-arrow-counterclockwise me-2"></i>正在撤回重命名
+          </h5>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span>撤回进度</span>
+              <span id="undo-progress-text">处理中...</span>
+            </div>
+            <div class="progress mb-3">
+              <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" role="progressbar"
+                   id="undo-progress-bar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
+              </div>
+            </div>
+          </div>
+          
+          <div id="undo-status" class="text-center">
+            <div class="loading-spinner me-2"></div>
+            正在撤回文件重命名...
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" id="close-undo-progress" style="display: none;">
+            <i class="bi bi-check-circle me-1"></i>完成
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Bootstrap JS -->
   <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
   <script>
@@ -580,35 +592,20 @@
         this.dropZone = document.getElementById('drop-zone');
         this.previewTable = document.getElementById('preview-table');
         this.previewTableBody = document.getElementById('preview-table-body');
-        this.previewControls = document.getElementById('preview-controls');
-        this.batchToolbar = document.getElementById('batch-toolbar');
-        this.selectedFiles = new Set();
-        this.fileStates = new Map(); // 存储文件状态
-        this.conflictGroups = new Map(); // 存储冲突文件组
-        this.isProcessing = false;
       }
       
       // 显示拖拽区域
       showDropZone() {
         this.dropZone.classList.remove('d-none');
         this.previewTable.classList.add('d-none');
-        this.previewControls.style.display = 'none';
-        this.batchToolbar.classList.remove('show');
-        this.selectedFiles.clear();
-        this.fileStates.clear();
-        this.conflictGroups.clear();
         selectedFiles = [];
         previewData = [];
-        this.updateBatchToolbar();
       }
       
       // 显示预览表格
       showPreviewTable() {
         this.dropZone.classList.add('d-none');
         this.previewTable.classList.remove('d-none');
-        this.previewControls.style.display = 'block';
-        this.batchToolbar.classList.add('show');
-        this.updateBatchToolbar();
       }
       
       // 更新预览数据
@@ -645,7 +642,8 @@
           template: document.getElementById('template').value.trim() || '模板名',
           video: document.getElementById('video').value.trim() || '视频名',
           author: document.getElementById('author').value.trim() || '制作人',
-          duration: document.getElementById('duration').value.trim() || '1'
+          duration: document.getElementById('duration').value.trim() || '1',
+          language: document.getElementById('language').value.trim() || ''
         };
       }
       
@@ -659,9 +657,6 @@
               <td class="preview-filename">${fileName}</td>
               <td class="preview-filename preview-loading">
                 <i class="bi bi-hourglass-split me-2"></i>正在生成预览...
-              </td>
-              <td class="text-center">
-                <i class="bi bi-hourglass-split text-muted"></i>
               </td>
             </tr>
           `;
@@ -680,9 +675,6 @@
               <td class="preview-filename preview-status-error">
                 <i class="bi bi-exclamation-triangle me-2"></i>预览生成失败
               </td>
-              <td class="text-center">
-                <i class="bi bi-x-circle text-danger"></i>
-              </td>
             </tr>
           `;
         });
@@ -693,78 +685,22 @@
       renderPreviewTable(metadata) {
         let html = '';
         
-        // 检测文件名冲突
-        this.detectConflicts(metadata);
-        
         metadata.forEach((item, index) => {
-          const fileId = `file-${index}`;
-          const isSelected = this.selectedFiles.has(fileId);
-          const fileState = this.fileStates.get(fileId) || 'pending';
-          
-          // 状态图标和样式
-          let statusIcon, statusClass, rowClass = '';
-          switch (fileState) {
-            case 'processing':
-              statusIcon = '<div class="loading-spinner"></div>';
-              statusClass = 'file-status-processing';
-              break;
-            case 'success':
-              statusIcon = '<i class="bi bi-check-circle text-success"></i>';
-              statusClass = 'file-status-success';
-              break;
-            case 'error':
-              statusIcon = '<i class="bi bi-x-circle text-danger"></i>';
-              statusClass = 'file-status-error';
-              break;
-            case 'conflict':
-              statusIcon = '<i class="bi bi-exclamation-triangle text-warning"></i>';
-              statusClass = 'file-status-conflict';
-              rowClass = 'conflict-highlight';
-              break;
-            default:
-              statusIcon = item.success
-                ? '<i class="bi bi-check-circle text-success"></i>'
-                : '<i class="bi bi-x-circle text-danger"></i>';
-              statusClass = item.success ? 'file-status-success' : 'file-status-error';
-          }
-          
-          if (isSelected) {
-            rowClass += ' file-row-selected';
-          }
-          
           const previewClass = item.success ? 'preview-status-success' : 'preview-status-error';
           
           html += `
-            <tr class="${rowClass}" data-file-id="${fileId}">
-              <td class="text-center">
-                <input type="checkbox" class="form-check-input file-checkbox"
-                       data-file-id="${fileId}" ${isSelected ? 'checked' : ''}>
-              </td>
+            <tr>
               <td class="preview-filename" title="${item.originalPath || item.originalName}">
                 ${item.originalName}
               </td>
               <td class="preview-filename ${previewClass}" title="${item.previewName}">
                 ${item.previewName}
               </td>
-              <td class="text-center ${statusClass}" title="${this.getStatusTooltip(fileState, item)}">
-                ${statusIcon}
-              </td>
-              <td class="text-center">
-                <div class="btn-group btn-group-sm" role="group">
-                  <button type="button" class="btn btn-outline-secondary btn-sm retry-btn"
-                          data-file-id="${fileId}" title="重试" ${fileState !== 'error' ? 'style="display:none"' : ''}>
-                    <i class="bi bi-arrow-clockwise"></i>
-                  </button>
-                </div>
-              </td>
             </tr>
           `;
         });
         
         this.previewTableBody.innerHTML = html;
-        this.setupTableEventListeners();
-        this.updateBatchToolbar();
-        this.updateSelectAllCheckbox();
       }
       
       // 实时更新预览（当表单字段变更时）
@@ -787,234 +723,6 @@
           this.showErrorState(selectedFiles, error.message);
         }
       }
-      
-      // 检测文件名冲突
-      detectConflicts(metadata) {
-        this.conflictGroups.clear();
-        const nameMap = new Map();
-        
-        metadata.forEach((item, index) => {
-          const previewName = item.previewName;
-          if (!nameMap.has(previewName)) {
-            nameMap.set(previewName, []);
-          }
-          nameMap.get(previewName).push(index);
-        });
-        
-        // 标记冲突文件
-        nameMap.forEach((indices, name) => {
-          if (indices.length > 1) {
-            this.conflictGroups.set(name, indices);
-            indices.forEach(index => {
-              this.fileStates.set(`file-${index}`, 'conflict');
-            });
-          }
-        });
-        
-        // 如果有冲突，显示冲突对话框
-        if (this.conflictGroups.size > 0) {
-          this.showConflictDialog();
-        }
-      }
-      
-      // 显示冲突对话框
-      showConflictDialog() {
-        const modal = new bootstrap.Modal(document.getElementById('conflictModal'));
-        const conflictList = document.getElementById('conflict-list');
-        
-        let html = '';
-        this.conflictGroups.forEach((indices, name) => {
-          html += `
-            <div class="alert alert-warning">
-              <strong>文件名：</strong> ${name}<br>
-              <strong>冲突文件：</strong>
-              <ul class="mb-0 mt-2">
-          `;
-          indices.forEach(index => {
-            const item = previewData[index];
-            html += `<li>${item.originalName}</li>`;
-          });
-          html += `</ul></div>`;
-        });
-        
-        conflictList.innerHTML = html;
-        modal.show();
-      }
-      
-      // 获取状态工具提示
-      getStatusTooltip(state, item) {
-        switch (state) {
-          case 'pending': return '等待处理';
-          case 'processing': return '正在处理...';
-          case 'success': return '处理成功';
-          case 'error': return `处理失败: ${item.error || '未知错误'}`;
-          case 'conflict': return '文件名冲突，将自动添加后缀';
-          default: return item.success ? '预览生成成功' : `预览生成失败: ${item.error || '未知错误'}`;
-        }
-      }
-      
-      // 设置表格事件监听器
-      setupTableEventListeners() {
-        // 文件复选框事件
-        document.querySelectorAll('.file-checkbox').forEach(checkbox => {
-          checkbox.addEventListener('change', (e) => {
-            const fileId = e.target.dataset.fileId;
-            if (e.target.checked) {
-              this.selectedFiles.add(fileId);
-            } else {
-              this.selectedFiles.delete(fileId);
-            }
-            this.updateRowSelection(fileId, e.target.checked);
-            this.updateBatchToolbar();
-            this.updateSelectAllCheckbox();
-          });
-        });
-        
-        // 重试按钮事件
-        document.querySelectorAll('.retry-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            const fileId = e.target.closest('.retry-btn').dataset.fileId;
-            this.retryFile(fileId);
-          });
-        });
-      }
-      
-      // 更新行选中状态
-      updateRowSelection(fileId, selected) {
-        const row = document.querySelector(`tr[data-file-id="${fileId}"]`);
-        if (row) {
-          if (selected) {
-            row.classList.add('file-row-selected');
-          } else {
-            row.classList.remove('file-row-selected');
-          }
-        }
-      }
-      
-      // 更新批量操作工具栏
-      updateBatchToolbar() {
-        const selectedCount = this.selectedFiles.size;
-        const totalCount = previewData.length;
-        const successCount = previewData.filter((_, index) =>
-          this.fileStates.get(`file-${index}`) === 'success').length;
-        const errorCount = previewData.filter((_, index) =>
-          this.fileStates.get(`file-${index}`) === 'error').length;
-        
-        // 更新选中数量
-        document.getElementById('selected-count').textContent = selectedCount;
-        
-        // 更新状态摘要
-        const statusSummary = document.getElementById('status-summary');
-        statusSummary.textContent = `总计: ${totalCount} | 成功: ${successCount} | 失败: ${errorCount}`;
-        
-        // 更新按钮状态
-        const batchRenameBtn = document.getElementById('batch-rename');
-        const batchRetryBtn = document.getElementById('batch-retry');
-        
-        batchRenameBtn.disabled = selectedCount === 0 || this.isProcessing;
-        batchRetryBtn.disabled = errorCount === 0 || this.isProcessing;
-      }
-      
-      // 更新全选复选框状态
-      updateSelectAllCheckbox() {
-        const selectAllCheckbox = document.getElementById('select-all-checkbox');
-        const totalCount = previewData.length;
-        const selectedCount = this.selectedFiles.size;
-        
-        if (selectedCount === 0) {
-          selectAllCheckbox.checked = false;
-          selectAllCheckbox.indeterminate = false;
-        } else if (selectedCount === totalCount) {
-          selectAllCheckbox.checked = true;
-          selectAllCheckbox.indeterminate = false;
-        } else {
-          selectAllCheckbox.checked = false;
-          selectAllCheckbox.indeterminate = true;
-        }
-      }
-      
-      // 全选/取消全选
-      toggleSelectAll() {
-        const selectAllCheckbox = document.getElementById('select-all-checkbox');
-        const shouldSelectAll = selectAllCheckbox.checked;
-        
-        this.selectedFiles.clear();
-        
-        if (shouldSelectAll) {
-          previewData.forEach((_, index) => {
-            this.selectedFiles.add(`file-${index}`);
-          });
-        }
-        
-        // 更新所有复选框
-        document.querySelectorAll('.file-checkbox').forEach(checkbox => {
-          checkbox.checked = shouldSelectAll;
-          this.updateRowSelection(checkbox.dataset.fileId, shouldSelectAll);
-        });
-        
-        this.updateBatchToolbar();
-      }
-      
-      // 重试单个文件
-      async retryFile(fileId) {
-        const index = parseInt(fileId.replace('file-', ''));
-        const item = previewData[index];
-        
-        if (!item) return;
-        
-        this.fileStates.set(fileId, 'processing');
-        this.updateFileStatus(fileId, 'processing');
-        
-        try {
-          const fields = this.getFormFields();
-          const metadata = await window.electronAPI.getFileMetadata({
-            filePaths: [item.originalPath],
-            fields
-          });
-          
-          if (metadata && metadata[0]) {
-            previewData[index] = metadata[0];
-            this.fileStates.set(fileId, metadata[0].success ? 'success' : 'error');
-            this.updateFileStatus(fileId, metadata[0].success ? 'success' : 'error');
-          }
-        } catch (error) {
-          this.fileStates.set(fileId, 'error');
-          this.updateFileStatus(fileId, 'error');
-        }
-        
-        this.updateBatchToolbar();
-      }
-      
-      // 更新单个文件状态显示
-      updateFileStatus(fileId, status) {
-        const row = document.querySelector(`tr[data-file-id="${fileId}"]`);
-        if (!row) return;
-        
-        const statusCell = row.querySelector('td:nth-child(4)');
-        const retryBtn = row.querySelector('.retry-btn');
-        
-        let statusIcon, statusClass;
-        switch (status) {
-          case 'processing':
-            statusIcon = '<div class="loading-spinner"></div>';
-            statusClass = 'file-status-processing';
-            retryBtn.style.display = 'none';
-            break;
-          case 'success':
-            statusIcon = '<i class="bi bi-check-circle text-success"></i>';
-            statusClass = 'file-status-success';
-            retryBtn.style.display = 'none';
-            break;
-          case 'error':
-            statusIcon = '<i class="bi bi-x-circle text-danger"></i>';
-            statusClass = 'file-status-error';
-            retryBtn.style.display = 'inline-block';
-            break;
-        }
-        
-        statusCell.className = `text-center ${statusClass}`;
-        statusCell.innerHTML = statusIcon;
-      }
     }
     
     // 创建预览管理器实例
@@ -1022,7 +730,7 @@
     
     // 历史记录管理
     const STORAGE_KEY = 'renameToolHistory';
-    const fieldNames = ['product', 'template', 'video', 'author', 'duration'];
+    const fieldNames = ['product', 'template', 'video', 'author', 'duration', 'language'];
     
     // 获取历史记录
     function getHistory() {
@@ -1040,7 +748,8 @@
         template: [],
         video: [],
         author: [],
-        duration: []
+        duration: [],
+        language: []
       };
     }
     
@@ -1215,6 +924,9 @@
           if (validFiles.length > 0) {
             selectedFiles = validFiles;
             updateFileListDisplay(validFiles);
+            
+            // 自动填入视频名
+            autoFillVideoName(validFiles);
             
             if (invalidFiles.length > 0) {
               const invalidNames = invalidFiles.map(path => path.split(/[/\\]/).pop());
@@ -1398,6 +1110,19 @@
               message = '制作时长不能超过1000小时';
             }
             break;
+          case 'language':
+            // 语言字段为可选，如果填写则验证格式
+            if (value && value.trim().length > 0) {
+              const trimmedValue = value.trim();
+              if (trimmedValue.length > 10) {
+                isValid = false;
+                message = '语言代码长度不能超过10个字符';
+              } else if (!/^[a-zA-Z0-9_-]+$/.test(trimmedValue)) {
+                isValid = false;
+                message = '语言代码只能包含字母、数字、下划线和连字符';
+              }
+            }
+            break;
         }
         
         // 更新字段样式
@@ -1415,16 +1140,30 @@
       }
       
       static validateAllFields() {
-        const fields = ['product', 'template', 'video', 'author', 'duration'];
+        const requiredFields = ['product', 'template', 'video', 'author', 'duration'];
+        const optionalFields = ['language'];
         let allValid = true;
         const errors = [];
         
-        fields.forEach(fieldName => {
+        // 验证必填字段
+        requiredFields.forEach(fieldName => {
           const value = document.getElementById(fieldName).value;
           const result = this.validateField(fieldName, value);
           if (!result.isValid) {
             allValid = false;
             errors.push(`${fieldName}: ${result.message}`);
+          }
+        });
+        
+        // 验证可选字段（只有在有值时才验证）
+        optionalFields.forEach(fieldName => {
+          const value = document.getElementById(fieldName).value;
+          if (value && value.trim().length > 0) {
+            const result = this.validateField(fieldName, value);
+            if (!result.isValid) {
+              allValid = false;
+              errors.push(`${fieldName}: ${result.message}`);
+            }
           }
         });
         
@@ -1453,7 +1192,7 @@
       progressManager.show(filesToRename.length);
       
       const fields = previewManager.getFormFields();
-      const options = { useNumberSuffix: document.getElementById('useNumberSuffix').checked };
+      const options = { useNumberSuffix: true }; // 始终启用数字后缀序号
       
       let successCount = 0;
       let errorCount = 0;
@@ -1506,6 +1245,11 @@
       progressManager.complete();
       previewManager.isProcessing = false;
       previewManager.updateBatchToolbar();
+      
+      // 更新撤回按钮状态（如果有成功的重命名操作）
+      if (successCount > 0 && undoManager) {
+        await undoManager.updateUndoButtonState();
+      }
       
       // 显示结果摘要
       if (successCount > 0) {
@@ -1571,6 +1315,32 @@
       });
     }
     
+    // 智能文件名提取函数
+    function extractVideoName(filename) {
+      // 1. 去除文件扩展名
+      let name = filename.replace(/\.[^.]+$/, '');
+      
+      // 2. 去除语言标识 [xx]
+      name = name.replace(/\[[a-zA-Z]{2,3}\]/g, '');
+      
+      // 3. 清理多余空格
+      return name.trim();
+    }
+    
+    // 自动填入视频名（仅当视频名字段为空时）
+    function autoFillVideoName(files) {
+      const videoField = document.getElementById('video');
+      if (videoField.value.trim() === '' && files && files.length > 0) {
+        // 取第一个文件的文件名进行提取
+        const firstFileName = files[0].split(/[/\\]/).pop();
+        const extractedName = extractVideoName(firstFileName);
+        if (extractedName) {
+          videoField.value = extractedName;
+          console.log('自动填入视频名:', extractedName);
+        }
+      }
+    }
+
     document.getElementById('select-files').addEventListener('click', async () => {
       console.log('=== 按钮选择文件 ===');
       
@@ -1581,6 +1351,8 @@
       updateFileListDisplay(files);
       
       if (files && files.length > 0) {
+        // 自动填入视频名
+        autoFillVideoName(files);
         showAlert(`成功选择 ${files.length} 个视频文件`, 'success');
       }
     });
@@ -1590,8 +1362,6 @@
       fieldNames.forEach(fieldName => {
         document.getElementById(fieldName).value = '';
       });
-      // 取消勾选复选框
-      document.getElementById('useNumberSuffix').checked = false;
       showAlert('已清空所有字段', 'info');
       
       // 刷新预览
@@ -1609,10 +1379,10 @@
       const video = document.getElementById('video').value.trim();
       const author = document.getElementById('author').value.trim();
       const duration = document.getElementById('duration').value.trim();
-      const useNumberSuffix = document.getElementById('useNumberSuffix').checked;
+      const language = document.getElementById('language').value.trim();
       
       if (!product || !template || !video || !author || !duration) {
-        showAlert('请填写所有字段！', 'danger');
+        showAlert('请填写所有必填字段！', 'danger');
         return;
       }
       
@@ -1628,9 +1398,12 @@
       addToHistory('video', video);
       addToHistory('author', author);
       addToHistory('duration', duration);
+      if (language) {
+        addToHistory('language', language);
+      }
       
-      const fields = { product, template, video, author, duration };
-      const options = { useNumberSuffix };
+      const fields = { product, template, video, author, duration, language };
+      const options = { useNumberSuffix: true }; // 始终启用数字后缀序号
       
       const result = await window.electronAPI.renameFiles({ files: selectedFiles, fields, options });
       
@@ -1718,72 +1491,165 @@
         field.addEventListener('change', debouncedRefresh);
       });
       
-      // 为复选框添加监听器
-      document.getElementById('useNumberSuffix').addEventListener('change', debouncedRefresh);
+      // 复选框已移除，数字后缀序号始终启用
+    }
+    
+    // 撤回功能管理器
+    class UndoManager {
+      constructor() {
+        this.undoButton = document.getElementById('undo-rename');
+        this.setupEventListeners();
+        this.updateUndoButtonState();
+      }
+      
+      setupEventListeners() {
+        // 撤回按钮点击事件
+        this.undoButton.addEventListener('click', () => {
+          this.showUndoConfirmDialog();
+        });
+        
+        // 撤回确认对话框事件
+        document.getElementById('confirm-undo-checkbox').addEventListener('change', (e) => {
+          document.getElementById('confirm-undo-btn').disabled = !e.target.checked;
+        });
+        
+        document.getElementById('confirm-undo-btn').addEventListener('click', () => {
+          this.performUndo();
+        });
+        
+        document.getElementById('close-undo-progress').addEventListener('click', () => {
+          bootstrap.Modal.getInstance(document.getElementById('undoProgressModal')).hide();
+        });
+      }
+      
+      async updateUndoButtonState() {
+        try {
+          const status = await window.electronAPI.getUndoStatus();
+          this.undoButton.disabled = !status.canUndo;
+          
+          if (status.canUndo) {
+            this.undoButton.title = status.message;
+          } else {
+            this.undoButton.title = '没有可撤回的操作';
+          }
+        } catch (error) {
+          console.error('获取撤回状态失败:', error);
+          this.undoButton.disabled = true;
+        }
+      }
+      
+      async showUndoConfirmDialog() {
+        try {
+          const status = await window.electronAPI.getUndoStatus();
+          
+          if (!status.canUndo) {
+            alert('没有可撤回的重命名操作');
+            return;
+          }
+          
+          // 显示撤回详情
+          const detailsHtml = `
+            <div class="mb-2">
+              <strong>操作时间：</strong>${new Date(status.timestamp).toLocaleString()}
+            </div>
+            <div class="mb-2">
+              <strong>文件数量：</strong>${status.operationCount} 个文件
+            </div>
+            <div class="text-muted small">
+              此操作将把这些文件的名称恢复到重命名前的状态。
+            </div>
+          `;
+          
+          document.getElementById('undo-details').innerHTML = detailsHtml;
+          
+          // 重置确认复选框
+          document.getElementById('confirm-undo-checkbox').checked = false;
+          document.getElementById('confirm-undo-btn').disabled = true;
+          
+          // 显示确认对话框
+          const modal = new bootstrap.Modal(document.getElementById('undoConfirmModal'));
+          modal.show();
+          
+        } catch (error) {
+          console.error('显示撤回确认对话框失败:', error);
+          alert('获取撤回信息失败：' + error.message);
+        }
+      }
+      
+      async performUndo() {
+        // 隐藏确认对话框
+        bootstrap.Modal.getInstance(document.getElementById('undoConfirmModal')).hide();
+        
+        // 显示进度对话框
+        const progressModal = new bootstrap.Modal(document.getElementById('undoProgressModal'));
+        progressModal.show();
+        
+        try {
+          const result = await window.electronAPI.undoLastRename();
+          
+          // 更新进度显示
+          document.getElementById('undo-progress-text').textContent = '撤回完成';
+          document.getElementById('undo-status').innerHTML = this.generateUndoResultHtml(result);
+          document.getElementById('close-undo-progress').style.display = 'block';
+          
+          // 更新撤回按钮状态
+          await this.updateUndoButtonState();
+          
+          // 如果当前有预览数据，刷新预览
+          if (selectedFiles.length > 0) {
+            previewManager.refreshPreview();
+          }
+          
+        } catch (error) {
+          console.error('撤回操作失败:', error);
+          document.getElementById('undo-progress-text').textContent = '撤回失败';
+          document.getElementById('undo-status').innerHTML = `
+            <div class="alert alert-danger">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              撤回操作失败：${error.message}
+            </div>
+          `;
+          document.getElementById('close-undo-progress').style.display = 'block';
+        }
+      }
+      
+      generateUndoResultHtml(result) {
+        let html = '';
+        
+        if (result.success) {
+          html += `
+            <div class="alert alert-success">
+              <i class="bi bi-check-circle me-2"></i>
+              撤回操作完成！成功恢复 ${result.successCount} 个文件的名称。
+            </div>
+          `;
+        } else {
+          html += `
+            <div class="alert alert-danger">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              撤回操作失败！
+            </div>
+          `;
+        }
+        
+        if (result.errorCount > 0) {
+          html += `
+            <div class="alert alert-warning">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              ${result.errorCount} 个文件撤回失败，请检查文件是否被占用或已被移动。
+            </div>
+          `;
+        }
+        
+        return html;
+      }
     }
     
     // 添加新的事件监听器
     function setupNewEventListeners() {
-      // 预览控制按钮事件
-      document.getElementById('refresh-preview').addEventListener('click', () => {
-        previewManager.refreshPreview();
-      });
-      
-      document.getElementById('select-all').addEventListener('click', () => {
-        document.getElementById('select-all-checkbox').checked = true;
-        previewManager.toggleSelectAll();
-      });
-      
-      document.getElementById('deselect-all').addEventListener('click', () => {
-        document.getElementById('select-all-checkbox').checked = false;
-        previewManager.toggleSelectAll();
-      });
-      
-      // 全选复选框事件
-      document.getElementById('select-all-checkbox').addEventListener('change', () => {
-        previewManager.toggleSelectAll();
-      });
-      
-      // 批量操作按钮事件
-      document.getElementById('batch-rename').addEventListener('click', () => {
-        const selectedFileIds = Array.from(previewManager.selectedFiles);
-        if (selectedFileIds.length > 0) {
-          performBatchRename(selectedFileIds);
-        }
-      });
-      
-      document.getElementById('batch-retry').addEventListener('click', () => {
-        const errorFileIds = [];
-        previewManager.fileStates.forEach((state, fileId) => {
-          if (state === 'error') {
-            errorFileIds.push(fileId);
-          }
-        });
-        
-        if (errorFileIds.length > 0) {
-          // 选中所有失败的文件
-          previewManager.selectedFiles.clear();
-          errorFileIds.forEach(fileId => {
-            previewManager.selectedFiles.add(fileId);
-          });
-          
-          // 更新界面
-          document.querySelectorAll('.file-checkbox').forEach(checkbox => {
-            checkbox.checked = errorFileIds.includes(checkbox.dataset.fileId);
-            previewManager.updateRowSelection(checkbox.dataset.fileId, checkbox.checked);
-          });
-          
-          previewManager.updateBatchToolbar();
-          previewManager.updateSelectAllCheckbox();
-          
-          // 执行批量重命名
-          performBatchRename(errorFileIds);
-        }
-      });
-      
       // 字段验证事件
-      const fieldNames = ['product', 'template', 'video', 'author', 'duration'];
-      fieldNames.forEach(fieldName => {
+      const allFieldNames = ['product', 'template', 'video', 'author', 'duration', 'language'];
+      allFieldNames.forEach(fieldName => {
         const field = document.getElementById(fieldName);
         
         // 实时验证
@@ -1795,31 +1661,10 @@
           FieldValidator.validateField(fieldName, e.target.value);
         });
       });
-      
-      // 键盘快捷键支持
-      document.addEventListener('keydown', (e) => {
-        // Ctrl+A 全选
-        if (e.ctrlKey && e.key === 'a' && previewData.length > 0) {
-          e.preventDefault();
-          document.getElementById('select-all-checkbox').checked = true;
-          previewManager.toggleSelectAll();
-        }
-        
-        // Enter 确认重命名（当有选中文件时）
-        if (e.key === 'Enter' && previewManager.selectedFiles.size > 0 && !previewManager.isProcessing) {
-          e.preventDefault();
-          const selectedFileIds = Array.from(previewManager.selectedFiles);
-          performBatchRename(selectedFileIds);
-        }
-        
-        // Escape 取消选择
-        if (e.key === 'Escape' && previewManager.selectedFiles.size > 0) {
-          e.preventDefault();
-          document.getElementById('select-all-checkbox').checked = false;
-          previewManager.toggleSelectAll();
-        }
-      });
     }
+    
+    // 全局变量
+    let undoManager;
     
     // 页面加载完成后初始化
     document.addEventListener('DOMContentLoaded', function() {
@@ -1829,13 +1674,17 @@
       setupNewEventListeners();
       progressManager.init();
       
+      // 初始化撤回管理器
+      undoManager = new UndoManager();
+      
       // 初始化工具提示
       const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
       tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
       });
       
-      console.log('第二阶段功能初始化完成：批量操作、状态管理、进度显示、错误处理优化');
+      console.log('预览界面简化完成：专注于文件名对比显示');
+      console.log('撤回功能初始化完成');
     });
   </script>
 </body>

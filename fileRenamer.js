@@ -3,6 +3,9 @@ const fs = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
 // ffprobe路径现在在main.js中统一设置
 
+// 撤回功能数据存储
+let lastRenameOperation = null;
+
 function getTodayStr() {
   const now = new Date();
   const yy = String(now.getFullYear()).slice(-2);
@@ -43,6 +46,22 @@ function extractLanguageCode(filePath) {
 }
 
 /**
+ * 智能提取视频名称（去除扩展名和语言标识）
+ * @param {string} filename - 文件名
+ * @returns {string} 提取的视频名称
+ */
+function extractVideoName(filename) {
+  // 1. 去除文件扩展名
+  let name = filename.replace(/\.[^.]+$/, '');
+  
+  // 2. 去除语言标识 [xx]
+  name = name.replace(/\[[a-zA-Z]{2,3}\]/g, '');
+  
+  // 3. 清理多余空格
+  return name.trim();
+}
+
+/**
  * 构建文件名
  * @param {Object} fields - 用户填写的字段
  * @param {string} ext - 文件扩展名
@@ -60,6 +79,26 @@ function buildName(fields, ext, ratio, language, videoDuration, videoSuffix = ''
 }
 
 /**
+ * 确定最终使用的语言代码（实现优先级逻辑）
+ * @param {string} userLanguage - 用户手动输入的语言代码
+ * @param {string} filePath - 文件路径（用于从文件名提取语言）
+ * @returns {string} 最终使用的语言代码
+ */
+function determineFinalLanguage(userLanguage, filePath) {
+  // 优先级：用户手动输入 > 文件名识别 > 默认值
+  if (userLanguage && userLanguage.trim().length > 0) {
+    return userLanguage.trim().toLowerCase();
+  }
+  
+  const extractedLanguage = extractLanguageCode(filePath);
+  if (extractedLanguage) {
+    return extractedLanguage;
+  }
+  
+  return "unknown";
+}
+
+/**
  * 获取一个唯一的视频名称，避免重复
  * @param {string} dir - 目录路径
  * @param {Object} fields - 用户填写的字段
@@ -70,7 +109,7 @@ function buildName(fields, ext, ratio, language, videoDuration, videoSuffix = ''
  * @param {boolean} useNumberSuffix - 是否使用数字后缀
  * @returns {Object} 包含生成的名称和使用的后缀
  */
-function getUniqueVideoName(dir, fields, ext, ratio, language, videoDuration, useNumberSuffix = false) {
+function getUniqueVideoName(dir, fields, ext, ratio, language, videoDuration, useNumberSuffix = true) {
   // 先尝试不带后缀的原始名称
   let videoSuffix = '';
   let baseName = buildName(fields, '', ratio, language, videoDuration, videoSuffix);
@@ -80,18 +119,7 @@ function getUniqueVideoName(dir, fields, ext, ratio, language, videoDuration, us
     return { name: fullName, videoSuffix: '' };
   }
   
-  if (!useNumberSuffix) {
-    // 如果不使用数字后缀，则使用原来的括号格式处理整个文件名
-    let counter = 1;
-    while (fs.existsSync(path.join(dir, fullName))) {
-      baseName = buildName(fields, '', ratio, language, videoDuration, '');
-      fullName = `${baseName}(${counter})${ext}`;
-      counter++;
-    }
-    return { name: fullName, videoSuffix: '' };
-  }
-  
-  // 使用数字后缀格式，在视频名后添加数字
+  // 始终使用数字后缀格式，在视频名后添加数字
   let counter = 2; // 从2开始，因为第一个不加后缀
   
   while (fs.existsSync(path.join(dir, fullName))) {
@@ -153,8 +181,9 @@ function getVideoDuration(filePath) {
  * @returns {Promise<Array>} 重命名结果
  */
 async function renameFiles(filePaths, fields, options = {}) {
-  const useNumberSuffix = options.useNumberSuffix || false;
+  const useNumberSuffix = true; // 始终启用数字后缀序号
   const results = [];
+  const successfulRenames = []; // 存储成功的重命名操作，用于撤回
   
   for (let i = 0; i < filePaths.length; i++) {
     const oldPath = filePaths[i];
@@ -168,30 +197,154 @@ async function renameFiles(filePaths, fields, options = {}) {
     // 获取视频时长
     const videoDuration = await getVideoDuration(oldPath) || "unknown";
     
-    // 从文件名中提取语言代码，如果没有则使用默认值"unknown"
-    const languageCode = extractLanguageCode(oldPath) || "unknown";
+    // 使用新的语言优先级逻辑：用户输入 > 文件名识别 > 默认值
+    const finalLanguage = determineFinalLanguage(fields.language, oldPath);
     
     // 获取唯一的文件名，处理重名情况
-    const { name: newName, videoSuffix } = getUniqueVideoName(dir, fields, ext, ratio, languageCode, videoDuration, useNumberSuffix);
+    const { name: newName, videoSuffix } = getUniqueVideoName(dir, fields, ext, ratio, finalLanguage, videoDuration, useNumberSuffix);
     const newPath = path.join(dir, newName);
     
     try {
       await fs.promises.rename(oldPath, newPath);
       results.push({ oldPath, newPath, success: true, videoSuffix });
+      // 保存成功的重命名操作用于撤回
+      successfulRenames.push({ oldPath, newPath });
     } catch (err) {
       results.push({ oldPath, newPath, success: false, error: err.message, videoSuffix });
     }
   }
   
+  // 只有当有成功的重命名操作时才保存撤回数据
+  if (successfulRenames.length > 0) {
+    lastRenameOperation = {
+      timestamp: new Date().toISOString(),
+      operations: successfulRenames,
+      totalCount: successfulRenames.length
+    };
+  }
+  
   return results;
+}
+
+/**
+ * 撤回最后一次重命名操作
+ * @returns {Promise<Object>} 撤回结果
+ */
+async function undoLastRename() {
+  if (!lastRenameOperation) {
+    return {
+      success: false,
+      error: '没有可撤回的重命名操作',
+      results: []
+    };
+  }
+  
+  const results = [];
+  let successCount = 0;
+  let errorCount = 0;
+  
+  // 逐个撤回重命名操作
+  for (const operation of lastRenameOperation.operations) {
+    const { oldPath, newPath } = operation;
+    
+    try {
+      // 检查新文件是否存在
+      if (!fs.existsSync(newPath)) {
+        results.push({
+          oldPath,
+          newPath,
+          success: false,
+          error: '目标文件不存在，可能已被移动或删除'
+        });
+        errorCount++;
+        continue;
+      }
+      
+      // 检查原文件名是否已被占用
+      if (fs.existsSync(oldPath)) {
+        results.push({
+          oldPath,
+          newPath,
+          success: false,
+          error: '原文件名已被占用，无法撤回'
+        });
+        errorCount++;
+        continue;
+      }
+      
+      // 执行撤回操作（将新文件名改回原文件名）
+      await fs.promises.rename(newPath, oldPath);
+      results.push({
+        oldPath,
+        newPath,
+        success: true
+      });
+      successCount++;
+      
+    } catch (err) {
+      results.push({
+        oldPath,
+        newPath,
+        success: false,
+        error: err.message
+      });
+      errorCount++;
+    }
+  }
+  
+  // 如果所有操作都成功，清除撤回数据
+  if (errorCount === 0) {
+    lastRenameOperation = null;
+  }
+  
+  return {
+    success: successCount > 0,
+    totalCount: lastRenameOperation.operations.length,
+    successCount,
+    errorCount,
+    results,
+    timestamp: lastRenameOperation.timestamp
+  };
+}
+
+/**
+ * 检查是否有可撤回的操作
+ * @returns {Object} 撤回状态信息
+ */
+function getUndoStatus() {
+  if (!lastRenameOperation) {
+    return {
+      canUndo: false,
+      message: '没有可撤回的操作'
+    };
+  }
+  
+  return {
+    canUndo: true,
+    timestamp: lastRenameOperation.timestamp,
+    operationCount: lastRenameOperation.totalCount,
+    message: `可撤回 ${lastRenameOperation.totalCount} 个文件的重命名操作`
+  };
+}
+
+/**
+ * 清除撤回数据（用于手动清除）
+ */
+function clearUndoData() {
+  lastRenameOperation = null;
 }
 
 module.exports = {
   renameFiles,
+  undoLastRename,
+  getUndoStatus,
+  clearUndoData,
   getVideoSize,
   getVideoDuration,
   extractLanguageCode,
+  extractVideoName,
   getNearestRatio,
   buildName,
-  getTodayStr
+  getTodayStr,
+  determineFinalLanguage
 };
