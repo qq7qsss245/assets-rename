@@ -25,6 +25,11 @@
   --border-radius-lg: 16px;
 }
 
+/* 确保 Bootstrap 的 d-none 类正确工作 */
+.d-none {
+  display: none !important;
+}
+
 body {
   padding: 16px;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);

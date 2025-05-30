@@ -15,17 +15,6 @@ async function initializeApp() {
   console.log('=== DOM 内容加载完成，开始初始化 ===');
   
   try {
-    // 初始化全局变量
-    console.log('初始化全局变量...');
-    if (typeof window.selectedFiles === 'undefined') {
-      window.selectedFiles = [];
-      console.log('✅ window.selectedFiles 已初始化');
-    }
-    if (typeof window.previewData === 'undefined') {
-      window.previewData = [];
-      console.log('✅ window.previewData 已初始化');
-    }
-    
     // 等待Bootstrap加载完成
     console.log('等待Bootstrap库加载...');
     await waitForBootstrap();
@@ -41,19 +30,14 @@ async function initializeApp() {
     
     // 初始化各个组件
     safeInitializeDropdowns();
-    setupDragAndDrop();
     setupFormFieldListeners();
-    setupNewEventListeners();
+    setupFieldValidation();
     
     // 初始化管理器实例
-    window.previewManager = new PreviewManager();
+    window.fileManager = new FileManager();
     window.progressManager = new ProgressManager();
     window.progressManager.init();
-    
-    // 初始化撤回管理器
-    console.log('准备初始化撤回管理器...');
     window.undoManager = new UndoManager();
-    console.log('撤回管理器初始化完成');
     
     // 设置主要事件监听器
     setupMainEventListeners();
@@ -65,7 +49,6 @@ async function initializeApp() {
     });
     
     console.log('✅ 应用初始化完成');
-    console.log('UI界面重构完成：紧凑布局，拖拽区域可点击选择文件');
   } catch (error) {
     console.error('❌ 初始化失败:', error);
     showAlert('应用初始化失败，请刷新页面重试', 'danger');
@@ -282,103 +265,12 @@ async function handleRenameResult(result) {
     showAlert('重命名失败，请检查文件权限或路径', 'danger');
   }
   
-  // 清空选择的文件
-  window.selectedFiles = [];
-  window.previewData = [];
-  
-  // 显示拖拽区域
-  if (window.previewManager) {
-    window.previewManager.showDropZone();
+  // 清空选择的文件并显示拖拽区域
+  if (window.fileManager) {
+    window.fileManager.showDropZone();
   }
 }
 
-/**
- * 处理文件选择完成事件
- * @param {Array} files - 选择的文件路径数组
- */
-async function handleFilesSelected(files) {
-  if (files && files.length > 0) {
-    window.selectedFiles = files;
-    await updateFileListDisplay(files);
-    
-    // 自动填入视频名
-    autoFillVideoName(files);
-    showAlert(`成功选择 ${files.length} 个视频文件`, 'success');
-  }
-}
-
-/**
- * 处理拖拽文件事件
- * @param {FileList} files - 拖拽的文件列表
- */
-async function handleDroppedFiles(files) {
-  const fileArray = Array.from(files);
-  
-  console.log('=== 拖拽文件处理 ===');
-  console.log('拖拽文件数量:', fileArray.length);
-  
-  // 使用 Electron 的 webUtils.getPathForFile() 获取拖拽文件路径
-  const filePaths = [];
-  
-  for (let i = 0; i < fileArray.length; i++) {
-    const file = fileArray[i];
-    let filePath = file.path;
-    
-    // 如果 path 为 undefined，使用 webUtils.getPathForFile() 获取路径
-    if (!filePath && window.electronAPI && window.electronAPI.getPathForFile) {
-      try {
-        filePath = await window.electronAPI.getPathForFile(file);
-        console.log(`文件 ${i + 1}: ${file.name} -> 路径获取成功`);
-      } catch (error) {
-        console.log(`文件 ${i + 1}: ${file.name} -> 路径获取失败:`, error);
-      }
-    }
-    
-    if (filePath) {
-      filePaths.push(filePath);
-    } else {
-      console.log(`文件 ${i + 1}: ${file.name} -> 无法获取路径`);
-    }
-  }
-  
-  if (filePaths.length === 0) {
-    showAlert('无法获取拖拽文件的路径，请使用点击选择文件功能', 'danger');
-    return;
-  }
-  
-  try {
-    const { validFiles, invalidFiles } = await window.electronAPI.validateVideoFiles(filePaths);
-    
-    if (validFiles.length > 0) {
-      window.selectedFiles = validFiles;
-      await updateFileListDisplay(validFiles);
-      
-      // 自动填入视频名
-      autoFillVideoName(validFiles);
-      
-      if (invalidFiles.length > 0) {
-        const invalidNames = invalidFiles.map(path => path.split(/[/\\]/).pop());
-        showAlert(
-          `成功添加 ${validFiles.length} 个视频文件。忽略了 ${invalidFiles.length} 个不支持的文件：${invalidNames.join(', ')}`,
-          'warning'
-        );
-      } else {
-        showAlert(`成功添加 ${validFiles.length} 个视频文件`, 'success');
-      }
-    } else {
-      if (invalidFiles.length > 0) {
-        const invalidNames = invalidFiles.map(path => path.split(/[/\\]/).pop());
-        showAlert(
-          `不支持的文件格式：${invalidNames.join(', ')}。请选择视频文件（${SUPPORTED_VIDEO_EXTENSIONS.join(', ')}）`,
-          'danger'
-        );
-      }
-    }
-  } catch (error) {
-    console.error('文件验证失败:', error);
-    showAlert('文件验证失败，请重试', 'danger');
-  }
-}
 
 /**
  * 获取应用状态
@@ -403,9 +295,6 @@ function getAppState() {
  * 重置应用状态
  */
 function resetAppState() {
-  window.selectedFiles = [];
-  window.previewData = [];
-  
   // 清空表单字段
   const fieldNames = ['product', 'template', 'video', 'author', 'duration', 'language'];
   fieldNames.forEach(fieldName => {
@@ -413,8 +302,8 @@ function resetAppState() {
   });
   
   // 显示拖拽区域
-  if (window.previewManager) {
-    window.previewManager.showDropZone();
+  if (window.fileManager) {
+    window.fileManager.showDropZone();
   }
 }
 
@@ -470,10 +359,6 @@ function runDiagnostics() {
 document.addEventListener('DOMContentLoaded', initializeApp);
 
 // 导出主要函数供全局使用
-window.handleFilesSelected = handleFilesSelected;
-window.handleDroppedFiles = handleDroppedFiles;
 window.getAppState = getAppState;
 window.resetAppState = resetAppState;
 window.runDiagnostics = runDiagnostics;
-window.previewManager = previewManager;
-// 这些变量已经在初始化时设置为window属性，无需重复导出

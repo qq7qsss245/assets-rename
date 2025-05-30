@@ -3,24 +3,154 @@
  * 负责处理用户界面交互、拖拽、进度显示等功能
  */
 
-// 全局变量 - 直接使用 window 对象避免作用域问题
-window.selectedFiles = window.selectedFiles || [];
-window.previewData = window.previewData || [];
+// 全局状态
+window.selectedFiles = [];
+window.previewData = [];
 
 /**
- * 预览管理器类
- * 负责文件预览功能的管理
+ * 文件管理器 - 负责文件选择和预览
  */
-class PreviewManager {
+class FileManager {
   constructor() {
-    this.previewContainer = document.getElementById('preview-container');
     this.dropZone = document.getElementById('drop-zone');
     this.previewTable = document.getElementById('preview-table');
     this.previewTableBody = document.getElementById('preview-table-body');
+    this.init();
+  }
+  
+  init() {
+    this.setupDragAndDrop();
+    this.setupClickSelect();
   }
   
   /**
-   * 显示拖拽区域
+   * 设置拖拽功能
+   */
+  setupDragAndDrop() {
+    // 阻止默认拖拽行为
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      this.dropZone.addEventListener(eventName, this.preventDefaults, false);
+      document.body.addEventListener(eventName, this.preventDefaults, false);
+    });
+    
+    // 拖拽高亮
+    ['dragenter', 'dragover'].forEach(eventName => {
+      this.dropZone.addEventListener(eventName, () => {
+        this.dropZone.classList.add('drag-over');
+      }, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+      this.dropZone.addEventListener(eventName, () => {
+        this.dropZone.classList.remove('drag-over');
+      }, false);
+    });
+    
+    // 处理文件拖拽
+    this.dropZone.addEventListener('drop', this.handleDrop.bind(this), false);
+  }
+  
+  /**
+   * 设置点击选择功能
+   */
+  setupClickSelect() {
+    this.dropZone.addEventListener('click', async () => {
+      try {
+        const files = await window.electronAPI.selectFiles();
+        if (files && files.length > 0) {
+          this.handleFiles(files);
+        }
+      } catch (error) {
+        console.error('选择文件失败:', error);
+        showAlert('选择文件失败', 'danger');
+      }
+    });
+  }
+  
+  preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  async handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = Array.from(dt.files);
+    
+    // 获取文件路径
+    const filePaths = [];
+    for (const file of files) {
+      try {
+        const filePath = await window.electronAPI.getPathForFile(file);
+        if (filePath) {
+          filePaths.push(filePath);
+        }
+      } catch (error) {
+        console.error('获取文件路径失败:', error);
+      }
+    }
+    
+    if (filePaths.length > 0) {
+      this.handleFiles(filePaths);
+    } else {
+      showAlert('无法获取拖拽文件的路径，请使用点击选择文件功能', 'danger');
+    }
+  }
+  
+  /**
+   * 处理文件列表
+   */
+  async handleFiles(files) {
+    try {
+      // 验证文件
+      const { validFiles, invalidFiles } = await window.electronAPI.validateVideoFiles(files);
+      
+      if (validFiles.length > 0) {
+        // 更新全局状态
+        window.selectedFiles = validFiles;
+        
+        // 切换到预览模式
+        this.showPreview();
+        
+        // 生成预览
+        await this.generatePreview(validFiles);
+        
+        // 自动填入视频名
+        if (typeof autoFillVideoName === 'function') {
+          autoFillVideoName(validFiles);
+        }
+        
+        // 显示成功消息
+        if (invalidFiles.length > 0) {
+          const invalidNames = invalidFiles.map(path => path.split(/[/\\]/).pop());
+          showAlert(
+            `成功添加 ${validFiles.length} 个视频文件。忽略了 ${invalidFiles.length} 个不支持的文件：${invalidNames.join(', ')}`,
+            'warning'
+          );
+        } else {
+          showAlert(`成功选择 ${validFiles.length} 个视频文件`, 'success');
+        }
+      } else {
+        if (invalidFiles.length > 0) {
+          const invalidNames = invalidFiles.map(path => path.split(/[/\\]/).pop());
+          showAlert(`不支持的文件格式：${invalidNames.join(', ')}`, 'danger');
+        }
+      }
+    } catch (error) {
+      console.error('处理文件失败:', error);
+      showAlert('处理文件失败，请重试', 'danger');
+    }
+  }
+  
+  /**
+   * 显示预览模式
+   */
+  showPreview() {
+    this.dropZone.classList.add('d-none');
+    this.previewTable.classList.remove('d-none');
+  }
+  
+  /**
+   * 显示拖拽模式
    */
   showDropZone() {
     this.dropZone.classList.remove('d-none');
@@ -30,75 +160,48 @@ class PreviewManager {
   }
   
   /**
-   * 显示预览表格
+   * 生成预览
    */
-  showPreviewTable() {
-    this.dropZone.classList.add('d-none');
-    this.previewTable.classList.remove('d-none');
-  }
-  
-  /**
-   * 更新预览数据
-   * @param {Array} files - 文件路径数组
-   */
-  async updatePreview(files) {
-    if (!files || files.length === 0) {
-      this.showDropZone();
-      return;
-    }
-    
-    window.selectedFiles = files;
-    this.showPreviewTable();
-    
+  async generatePreview(files) {
     // 显示加载状态
     this.showLoadingState(files);
     
-    // 获取表单字段
-    const fields = this.getFormFields();
-    
-    // 获取文件元数据和预览名称
     try {
+      // 获取表单字段
+      const fields = this.getFormFields();
+      
+      // 获取文件元数据
       const metadata = await window.electronAPI.getFileMetadata({ filePaths: files, fields });
       window.previewData = metadata;
+      
+      // 渲染预览表格
       this.renderPreviewTable(metadata);
     } catch (error) {
-      console.error('获取文件元数据失败:', error);
+      console.error('生成预览失败:', error);
       this.showErrorState(files, error.message);
     }
   }
   
   /**
    * 获取表单字段
-   * @returns {Object} 表单字段对象
    */
   getFormFields() {
-    const videoValue = document.getElementById('video').value.trim();
-    console.log('=== getFormFields 调试信息 ===');
-    console.log('原始视频名字段值:', `"${document.getElementById('video').value}"`);
-    console.log('trim后的视频名字段值:', `"${videoValue}"`);
-    console.log('视频名字段是否为空:', videoValue === '');
-    
-    const fields = {
+    return {
       product: document.getElementById('product').value.trim() || '产品名',
       template: document.getElementById('template').value.trim() || '模板名',
-      video: videoValue, // 移除默认值，允许空白值传递给后续处理
+      video: document.getElementById('video').value.trim(),
       author: document.getElementById('author').value.trim() || '制作人',
       duration: document.getElementById('duration').value.trim() || '1',
       language: document.getElementById('language').value.trim() || ''
     };
-    
-    console.log('最终字段值:', fields);
-    console.log('video字段是否为空:', fields.video === '');
-    return fields;
   }
   
   /**
    * 显示加载状态
-   * @param {Array} files - 文件路径数组
    */
   showLoadingState(files) {
     let html = '';
-    files.forEach((filePath, index) => {
+    files.forEach((filePath) => {
       const fileName = filePath.split(/[/\\]/).pop();
       html += `
         <tr>
@@ -114,12 +217,10 @@ class PreviewManager {
   
   /**
    * 显示错误状态
-   * @param {Array} files - 文件路径数组
-   * @param {string} errorMessage - 错误消息
    */
   showErrorState(files, errorMessage) {
     let html = '';
-    files.forEach((filePath, index) => {
+    files.forEach((filePath) => {
       const fileName = filePath.split(/[/\\]/).pop();
       html += `
         <tr>
@@ -135,12 +236,11 @@ class PreviewManager {
   
   /**
    * 渲染预览表格
-   * @param {Array} metadata - 文件元数据数组
    */
   renderPreviewTable(metadata) {
     let html = '';
     
-    metadata.forEach((item, index) => {
+    metadata.forEach((item) => {
       const previewClass = item.success ? 'preview-status-success' : 'preview-status-error';
       
       html += `
@@ -159,194 +259,11 @@ class PreviewManager {
   }
   
   /**
-   * 实时更新预览（当表单字段变更时）
+   * 刷新预览
    */
   async refreshPreview() {
     if (window.selectedFiles.length === 0) return;
-    
-    // 显示加载状态
-    this.showLoadingState(window.selectedFiles);
-    
-    // 获取表单字段
-    const fields = this.getFormFields();
-    
-    // 重新获取预览数据
-    try {
-      const metadata = await window.electronAPI.getFileMetadata({ filePaths: window.selectedFiles, fields });
-      previewData = metadata;
-      this.renderPreviewTable(metadata);
-    } catch (error) {
-      console.error('刷新预览失败:', error);
-      this.showErrorState(window.selectedFiles, error.message);
-    }
-  }
-}
-
-/**
- * 进度管理器类
- * 负责显示和管理操作进度
- */
-class ProgressManager {
-  constructor() {
-    this.modal = null;
-    this.progressBar = null;
-    this.progressText = null;
-    this.currentFile = null;
-    this.successCount = null;
-    this.errorCount = null;
-    this.remainingCount = null;
-    this.progressLog = null;
-    this.isCancelled = false;
-  }
-  
-  /**
-   * 初始化进度管理器
-   */
-  init() {
-    try {
-      if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
-        console.error('Bootstrap Modal未加载');
-        return;
-      }
-      
-      this.modal = new bootstrap.Modal(document.getElementById('progressModal'));
-      this.progressBar = document.getElementById('progress-bar');
-      this.progressText = document.getElementById('progress-text');
-      this.currentFile = document.getElementById('current-file');
-      this.successCount = document.getElementById('success-count');
-      this.errorCount = document.getElementById('error-count');
-      this.remainingCount = document.getElementById('remaining-count');
-      this.progressLog = document.getElementById('progress-log');
-      
-      // 取消按钮事件
-      document.getElementById('cancel-operation').addEventListener('click', () => {
-        this.cancel();
-      });
-      
-      // 完成按钮事件
-      document.getElementById('close-progress').addEventListener('click', () => {
-        this.close();
-      });
-    } catch (error) {
-      console.error('ProgressManager初始化失败:', error);
-    }
-  }
-  
-  /**
-   * 显示进度对话框
-   * @param {number} totalFiles - 总文件数
-   */
-  show(totalFiles) {
-    try {
-      this.isCancelled = false;
-      this.reset();
-      this.remainingCount.textContent = totalFiles;
-      this.progressText.textContent = `0 / ${totalFiles}`;
-      
-      if (this.modal) {
-        this.modal.show();
-      } else {
-        console.error('Progress modal未初始化');
-      }
-      
-      // 启用取消按钮
-      document.getElementById('cancel-operation').disabled = false;
-      document.getElementById('close-progress').style.display = 'none';
-    } catch (error) {
-      console.error('显示进度对话框失败:', error);
-    }
-  }
-  
-  /**
-   * 更新进度
-   * @param {number} current - 当前进度
-   * @param {number} total - 总数
-   * @param {string} fileName - 当前文件名
-   */
-  updateProgress(current, total, fileName) {
-    if (this.isCancelled) return;
-    
-    const percentage = Math.round((current / total) * 100);
-    this.progressBar.style.width = `${percentage}%`;
-    this.progressBar.setAttribute('aria-valuenow', percentage);
-    this.progressText.textContent = `${current} / ${total}`;
-    this.currentFile.textContent = fileName;
-    this.remainingCount.textContent = total - current;
-  }
-  
-  /**
-   * 更新计数
-   * @param {number} success - 成功数
-   * @param {number} error - 错误数
-   */
-  updateCounts(success, error) {
-    this.successCount.textContent = success;
-    this.errorCount.textContent = error;
-  }
-  
-  /**
-   * 添加日志
-   * @param {string} message - 日志消息
-   * @param {string} type - 日志类型
-   */
-  addLog(message, type = 'info') {
-    const timestamp = new Date().toLocaleTimeString();
-    const logClass = type === 'error' ? 'text-danger' : type === 'success' ? 'text-success' : 'text-muted';
-    const logEntry = document.createElement('div');
-    logEntry.className = `small ${logClass}`;
-    logEntry.innerHTML = `<span class="text-muted">[${timestamp}]</span> ${message}`;
-    this.progressLog.appendChild(logEntry);
-    this.progressLog.scrollTop = this.progressLog.scrollHeight;
-  }
-  
-  /**
-   * 完成操作
-   */
-  complete() {
-    this.currentFile.textContent = '处理完成';
-    this.progressBar.classList.remove('progress-bar-animated');
-    
-    // 禁用取消按钮，显示完成按钮
-    document.getElementById('cancel-operation').disabled = true;
-    document.getElementById('close-progress').style.display = 'inline-block';
-    
-    this.addLog('所有文件处理完成', 'success');
-  }
-  
-  /**
-   * 取消操作
-   */
-  cancel() {
-    this.isCancelled = true;
-    this.currentFile.textContent = '操作已取消';
-    this.addLog('用户取消了操作', 'error');
-    this.complete();
-  }
-  
-  /**
-   * 关闭进度对话框
-   */
-  close() {
-    try {
-      if (this.modal) {
-        this.modal.hide();
-      }
-    } catch (error) {
-      console.error('关闭进度对话框失败:', error);
-    }
-  }
-  
-  /**
-   * 重置进度状态
-   */
-  reset() {
-    this.progressBar.style.width = '0%';
-    this.progressBar.classList.add('progress-bar-animated');
-    this.successCount.textContent = '0';
-    this.errorCount.textContent = '0';
-    this.remainingCount.textContent = '0';
-    this.progressLog.innerHTML = '';
-    this.currentFile.textContent = '准备开始...';
+    await this.generatePreview(window.selectedFiles);
   }
 }
 
@@ -355,22 +272,14 @@ class ProgressManager {
  */
 class UndoManager {
   constructor() {
-    console.log('=== 初始化撤回管理器 ===');
     this.undoButton = document.getElementById('undo-rename');
-    console.log('撤回按钮元素:', this.undoButton);
     this.setupEventListeners();
     this.updateUndoButtonState();
   }
   
-  /**
-   * 设置事件监听器
-   */
   setupEventListeners() {
     // 撤回按钮点击事件
     this.undoButton.addEventListener('click', () => {
-      console.log('=== 撤回按钮被点击 ===');
-      console.log('按钮状态 - disabled:', this.undoButton.disabled);
-      console.log('按钮标题:', this.undoButton.title);
       this.showUndoConfirmDialog();
     });
     
@@ -385,11 +294,9 @@ class UndoManager {
     
     document.getElementById('close-undo-progress').addEventListener('click', () => {
       try {
-        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-          const modal = bootstrap.Modal.getInstance(document.getElementById('undoProgressModal'));
-          if (modal) {
-            modal.hide();
-          }
+        const modal = bootstrap.Modal.getInstance(document.getElementById('undoProgressModal'));
+        if (modal) {
+          modal.hide();
         }
       } catch (error) {
         console.error('关闭撤回进度对话框失败:', error);
@@ -397,33 +304,17 @@ class UndoManager {
     });
   }
   
-  /**
-   * 更新撤回按钮状态
-   */
   async updateUndoButtonState() {
-    console.log('=== 更新撤回按钮状态 ===');
     try {
       const status = await window.electronAPI.getUndoStatus();
-      console.log('撤回状态:', status);
-      
       this.undoButton.disabled = !status.canUndo;
-      
-      if (status.canUndo) {
-        this.undoButton.title = status.message;
-        console.log('撤回按钮已启用:', status.message);
-      } else {
-        this.undoButton.title = '没有可撤回的操作';
-        console.log('撤回按钮已禁用: 没有可撤回的操作');
-      }
+      this.undoButton.title = status.canUndo ? status.message : '没有可撤回的操作';
     } catch (error) {
       console.error('获取撤回状态失败:', error);
       this.undoButton.disabled = true;
     }
   }
   
-  /**
-   * 显示撤回确认对话框
-   */
   async showUndoConfirmDialog() {
     try {
       const status = await window.electronAPI.getUndoStatus();
@@ -453,13 +344,8 @@ class UndoManager {
       document.getElementById('confirm-undo-btn').disabled = true;
       
       // 显示确认对话框
-      if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-        const modal = new bootstrap.Modal(document.getElementById('undoConfirmModal'));
-        modal.show();
-      } else {
-        console.error('Bootstrap Modal未加载');
-        showAlert('界面组件未加载完成，请刷新页面重试', 'danger');
-      }
+      const modal = new bootstrap.Modal(document.getElementById('undoConfirmModal'));
+      modal.show();
       
     } catch (error) {
       console.error('显示撤回确认对话框失败:', error);
@@ -467,236 +353,179 @@ class UndoManager {
     }
   }
   
-  /**
-   * 执行撤回操作
-   */
   async performUndo() {
     try {
       // 隐藏确认对话框
-      if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-        const confirmModal = bootstrap.Modal.getInstance(document.getElementById('undoConfirmModal'));
-        if (confirmModal) {
-          confirmModal.hide();
-        }
+      const confirmModal = bootstrap.Modal.getInstance(document.getElementById('undoConfirmModal'));
+      if (confirmModal) {
+        confirmModal.hide();
       }
       
       // 显示进度对话框
-      if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-        const progressModal = new bootstrap.Modal(document.getElementById('undoProgressModal'));
-        progressModal.show();
-      } else {
-        console.error('Bootstrap Modal未加载');
-        showAlert('界面组件未加载完成，请刷新页面重试', 'danger');
-        return;
-      }
+      const progressModal = new bootstrap.Modal(document.getElementById('undoProgressModal'));
+      progressModal.show();
     
-      try {
-        const result = await window.electronAPI.undoLastRename();
-        
-        // 更新进度显示
-        document.getElementById('undo-progress-text').textContent = '撤回完成';
-        document.getElementById('undo-status').innerHTML = this.generateUndoResultHtml(result);
-        document.getElementById('close-undo-progress').style.display = 'block';
-        
-        // 更新撤回按钮状态
-        await this.updateUndoButtonState();
-        
-        // 如果当前有预览数据，刷新预览
-        if (selectedFiles.length > 0) {
-          window.previewManager.refreshPreview();
-        }
-        
-      } catch (error) {
-        console.error('撤回操作失败:', error);
-        document.getElementById('undo-progress-text').textContent = '撤回失败';
-        document.getElementById('undo-status').innerHTML = `
-          <div class="alert alert-danger">
-            <i class="bi bi-exclamation-triangle me-2"></i>
-            撤回操作失败：${error.message}
-          </div>
-        `;
-        document.getElementById('close-undo-progress').style.display = 'block';
-      }
+      const result = await window.electronAPI.undoLastRename();
+      
+      // 更新进度显示
+      document.getElementById('undo-progress-text').textContent = '撤回完成';
+      document.getElementById('undo-status').innerHTML = this.generateUndoResultHtml(result);
+      document.getElementById('close-undo-progress').style.display = 'block';
+      
+      // 更新撤回按钮状态
+      await this.updateUndoButtonState();
+      
     } catch (error) {
-      console.error('执行撤回操作失败:', error);
-      showAlert('撤回操作失败：' + error.message, 'danger');
+      console.error('撤回操作失败:', error);
+      document.getElementById('undo-status').innerHTML = `
+        <div class="text-danger">
+          <i class="bi bi-exclamation-triangle me-2"></i>撤回操作失败：${error.message}
+        </div>
+      `;
+      document.getElementById('close-undo-progress').style.display = 'block';
     }
   }
   
-  /**
-   * 生成撤回结果HTML
-   * @param {Object} result - 撤回结果
-   * @returns {string} HTML字符串
-   */
   generateUndoResultHtml(result) {
-    let html = '';
-    
-    if (result.success) {
-      html += `
-        <div class="alert alert-success">
-          <i class="bi bi-check-circle me-2"></i>
-          撤回操作完成！成功恢复 ${result.successCount} 个文件的名称。
-        </div>
-      `;
-    } else {
-      html += `
-        <div class="alert alert-danger">
-          <i class="bi bi-exclamation-triangle me-2"></i>
-          撤回操作失败！
+    if (!result.success) {
+      return `
+        <div class="text-danger">
+          <i class="bi bi-exclamation-triangle me-2"></i>撤回操作失败：${result.error}
         </div>
       `;
     }
     
-    if (result.errorCount > 0) {
-      html += `
-        <div class="alert alert-warning">
-          <i class="bi bi-exclamation-triangle me-2"></i>
-          ${result.errorCount} 个文件撤回失败，请检查文件是否被占用或已被移动。
-        </div>
-      `;
-    }
-    
-    return html;
+    return `
+      <div class="text-success mb-2">
+        <i class="bi bi-check-circle me-2"></i>撤回操作完成
+      </div>
+      <div class="small text-muted">
+        成功撤回 ${result.successCount} 个文件，失败 ${result.errorCount} 个文件
+      </div>
+    `;
   }
 }
 
 /**
- * 更新文件列表显示（现在使用预览管理器）
- * @param {Array} files - 文件路径数组
+ * 进度管理器类
  */
-async function updateFileListDisplay(files) {
-  await window.previewManager.updatePreview(files);
-}
-
-/**
- * 设置拖拽和文件选择功能
- */
-function setupDragAndDrop() {
-  const fileListDiv = document.getElementById('drop-zone');
-  
-  // 阻止默认拖拽行为
-  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-    fileListDiv.addEventListener(eventName, preventDefaults, false);
-    document.body.addEventListener(eventName, preventDefaults, false);
-  });
-  
-  // 高亮拖拽区域
-  ['dragenter', 'dragover'].forEach(eventName => {
-    fileListDiv.addEventListener(eventName, highlight, false);
-  });
-  
-  // 取消高亮
-  ['dragleave', 'drop'].forEach(eventName => {
-    fileListDiv.addEventListener(eventName, unhighlight, false);
-  });
-  
-  // 处理文件拖拽
-  fileListDiv.addEventListener('drop', handleDrop, false);
-  
-  // 添加点击事件处理（合并文件选择功能）
-  fileListDiv.addEventListener('click', async () => {
-    console.log('=== 点击拖拽区域选择文件 ===');
-    
-    const files = await window.electronAPI.selectFiles();
-    console.log('点击选择文件数量:', files ? files.length : 0);
-    
-    if (files && files.length > 0) {
-      window.selectedFiles = files;
-      updateFileListDisplay(files);
-      
-      // 自动填入视频名
-      autoFillVideoName(files);
-      showAlert(`成功选择 ${files.length} 个视频文件`, 'success');
-    }
-  });
-  
-  function preventDefaults(e) {
-    e.preventDefault();
-    e.stopPropagation();
+class ProgressManager {
+  constructor() {
+    this.modal = null;
+    this.progressBar = null;
+    this.progressText = null;
+    this.currentFile = null;
+    this.successCount = null;
+    this.errorCount = null;
+    this.remainingCount = null;
+    this.progressLog = null;
+    this.isCancelled = false;
   }
   
-  function highlight(e) {
-    fileListDiv.classList.add('drag-over');
-  }
-  
-  function unhighlight(e) {
-    fileListDiv.classList.remove('drag-over');
-  }
-  
-  function handleDrop(e) {
-    const dt = e.dataTransfer;
-    const files = dt.files;
-    
-    handleFiles(files);
-  }
-  
-  async function handleFiles(files) {
-    const fileArray = Array.from(files);
-    
-    console.log('=== 拖拽文件处理 ===');
-    console.log('拖拽文件数量:', fileArray.length);
-    
-    // 修复：使用 Electron 的 webUtils.getPathForFile() 获取拖拽文件路径
-    const filePaths = [];
-    
-    for (let i = 0; i < fileArray.length; i++) {
-      const file = fileArray[i];
-      let filePath = file.path;
-      
-      // 如果 path 为 undefined，使用 webUtils.getPathForFile() 获取路径
-      if (!filePath && window.electronAPI && window.electronAPI.getPathForFile) {
-        try {
-          filePath = await window.electronAPI.getPathForFile(file);
-          console.log(`文件 ${i + 1}: ${file.name} -> 路径获取成功`);
-        } catch (error) {
-          console.log(`文件 ${i + 1}: ${file.name} -> 路径获取失败:`, error);
-        }
-      }
-      
-      if (filePath) {
-        filePaths.push(filePath);
-      } else {
-        console.log(`文件 ${i + 1}: ${file.name} -> 无法获取路径`);
-      }
-    }
-    
-    if (filePaths.length === 0) {
-      showAlert('无法获取拖拽文件的路径，请使用点击选择文件功能', 'danger');
-      return;
-    }
-    
+  init() {
     try {
-      const { validFiles, invalidFiles } = await window.electronAPI.validateVideoFiles(filePaths);
+      this.modal = new bootstrap.Modal(document.getElementById('progressModal'));
+      this.progressBar = document.getElementById('progress-bar');
+      this.progressText = document.getElementById('progress-text');
+      this.currentFile = document.getElementById('current-file');
+      this.successCount = document.getElementById('success-count');
+      this.errorCount = document.getElementById('error-count');
+      this.remainingCount = document.getElementById('remaining-count');
+      this.progressLog = document.getElementById('progress-log');
       
-      if (validFiles.length > 0) {
-        window.selectedFiles = validFiles;
-        updateFileListDisplay(validFiles);
-        
-        // 自动填入视频名
-        autoFillVideoName(validFiles);
-        
-        if (invalidFiles.length > 0) {
-          const invalidNames = invalidFiles.map(path => path.split(/[/\\]/).pop());
-          showAlert(
-            `成功添加 ${validFiles.length} 个视频文件。忽略了 ${invalidFiles.length} 个不支持的文件：${invalidNames.join(', ')}`,
-            'warning'
-          );
-        } else {
-          showAlert(`成功添加 ${validFiles.length} 个视频文件`, 'success');
-        }
-      } else {
-        if (invalidFiles.length > 0) {
-          const invalidNames = invalidFiles.map(path => path.split(/[/\\]/).pop());
-          showAlert(
-            `不支持的文件格式：${invalidNames.join(', ')}。请选择视频文件（${SUPPORTED_VIDEO_EXTENSIONS.join(', ')}）`,
-            'danger'
-          );
-        }
+      // 取消按钮事件
+      document.getElementById('cancel-operation').addEventListener('click', () => {
+        this.cancel();
+      });
+      
+      // 完成按钮事件
+      document.getElementById('close-progress').addEventListener('click', () => {
+        this.close();
+      });
+    } catch (error) {
+      console.error('ProgressManager初始化失败:', error);
+    }
+  }
+  
+  show(totalFiles) {
+    try {
+      this.isCancelled = false;
+      this.reset();
+      this.remainingCount.textContent = totalFiles;
+      this.progressText.textContent = `0 / ${totalFiles}`;
+      
+      if (this.modal) {
+        this.modal.show();
+      }
+      
+      document.getElementById('cancel-operation').disabled = false;
+      document.getElementById('close-progress').style.display = 'none';
+    } catch (error) {
+      console.error('显示进度对话框失败:', error);
+    }
+  }
+  
+  updateProgress(current, total, fileName) {
+    if (this.isCancelled) return;
+    
+    const percentage = Math.round((current / total) * 100);
+    this.progressBar.style.width = `${percentage}%`;
+    this.progressBar.setAttribute('aria-valuenow', percentage);
+    this.progressText.textContent = `${current} / ${total}`;
+    this.currentFile.textContent = fileName;
+    this.remainingCount.textContent = total - current;
+  }
+  
+  updateCounts(success, error) {
+    this.successCount.textContent = success;
+    this.errorCount.textContent = error;
+  }
+  
+  addLog(message, type = 'info') {
+    const timestamp = new Date().toLocaleTimeString();
+    const logClass = type === 'error' ? 'text-danger' : type === 'success' ? 'text-success' : 'text-muted';
+    const logEntry = document.createElement('div');
+    logEntry.className = `small ${logClass}`;
+    logEntry.innerHTML = `<span class="text-muted">[${timestamp}]</span> ${message}`;
+    this.progressLog.appendChild(logEntry);
+    this.progressLog.scrollTop = this.progressLog.scrollHeight;
+  }
+  
+  complete() {
+    this.currentFile.textContent = '处理完成';
+    this.progressBar.classList.remove('progress-bar-animated');
+    
+    document.getElementById('cancel-operation').disabled = true;
+    document.getElementById('close-progress').style.display = 'inline-block';
+    
+    this.addLog('所有文件处理完成', 'success');
+  }
+  
+  cancel() {
+    this.isCancelled = true;
+    this.currentFile.textContent = '操作已取消';
+    this.addLog('用户取消了操作', 'error');
+    this.complete();
+  }
+  
+  close() {
+    try {
+      if (this.modal) {
+        this.modal.hide();
       }
     } catch (error) {
-      console.error('文件验证失败:', error);
-      showAlert('文件验证失败，请重试', 'danger');
+      console.error('关闭进度对话框失败:', error);
     }
+  }
+  
+  reset() {
+    this.progressBar.style.width = '0%';
+    this.progressBar.classList.add('progress-bar-animated');
+    this.successCount.textContent = '0';
+    this.errorCount.textContent = '0';
+    this.remainingCount.textContent = '0';
+    this.progressLog.innerHTML = '';
+    this.currentFile.textContent = '准备开始...';
   }
 }
 
@@ -704,18 +533,18 @@ function setupDragAndDrop() {
  * 添加表单字段变更监听器
  */
 function setupFormFieldListeners() {
-  // 防抖函数，避免频繁更新
   let debounceTimer;
-  const debounceDelay = 500; // 500ms延迟
+  const debounceDelay = 500;
   
   function debouncedRefresh() {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
-      window.previewManager.refreshPreview();
+      if (window.fileManager) {
+        window.fileManager.refreshPreview();
+      }
     }, debounceDelay);
   }
   
-  // 为所有表单字段添加监听器
   const fieldNames = ['product', 'template', 'video', 'author', 'duration', 'language'];
   fieldNames.forEach(fieldName => {
     const field = document.getElementById(fieldName);
@@ -725,29 +554,35 @@ function setupFormFieldListeners() {
 }
 
 /**
- * 添加新的事件监听器
+ * 添加字段验证事件监听器
  */
-function setupNewEventListeners() {
-  // 字段验证事件
+function setupFieldValidation() {
   const allFieldNames = ['product', 'template', 'video', 'author', 'duration', 'language'];
   allFieldNames.forEach(fieldName => {
     const field = document.getElementById(fieldName);
     
-    // 实时验证
     field.addEventListener('input', (e) => {
-      FieldValidator.validateField(fieldName, e.target.value);
+      if (typeof FieldValidator !== 'undefined') {
+        FieldValidator.validateField(fieldName, e.target.value);
+      }
     });
     
     field.addEventListener('blur', (e) => {
-      FieldValidator.validateField(fieldName, e.target.value);
+      if (typeof FieldValidator !== 'undefined') {
+        FieldValidator.validateField(fieldName, e.target.value);
+      }
     });
   });
 }
 
 // 导出函数供其他模块使用
-window.updateFileListDisplay = updateFileListDisplay;
+window.updateFileListDisplay = function(files) {
+  if (window.fileManager) {
+    window.fileManager.handleFiles(files);
+  }
+};
 
 // 创建全局实例变量
-window.previewManager = null;
+window.fileManager = null;
 window.progressManager = null;
 window.undoManager = null;
