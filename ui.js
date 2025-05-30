@@ -72,14 +72,24 @@ class PreviewManager {
    * @returns {Object} 表单字段对象
    */
   getFormFields() {
-    return {
+    const videoValue = document.getElementById('video').value.trim();
+    console.log('=== getFormFields 调试信息 ===');
+    console.log('原始视频名字段值:', `"${document.getElementById('video').value}"`);
+    console.log('trim后的视频名字段值:', `"${videoValue}"`);
+    console.log('视频名字段是否为空:', videoValue === '');
+    
+    const fields = {
       product: document.getElementById('product').value.trim() || '产品名',
       template: document.getElementById('template').value.trim() || '模板名',
-      video: document.getElementById('video').value.trim() || '视频名',
+      video: videoValue, // 移除默认值，允许空白值传递给后续处理
       author: document.getElementById('author').value.trim() || '制作人',
       duration: document.getElementById('duration').value.trim() || '1',
       language: document.getElementById('language').value.trim() || ''
     };
+    
+    console.log('最终字段值:', fields);
+    console.log('video字段是否为空:', fields.video === '');
+    return fields;
   }
   
   /**

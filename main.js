@@ -166,12 +166,21 @@ ipcMain.handle('get-file-metadata', async (event, data) => {
       // 获取该文件在其比例组内的序号
       const ratioGroupIndex = ratioGroupIndexes.get(i);
       
+      console.log(`=== 文件 ${i + 1} 预览生成调试信息 ===`);
+      console.log('文件路径:', filePath);
+      console.log('原文件名:', path.basename(filePath));
+      console.log('传入的 fields:', fields);
+      console.log('fields.video 值:', `"${fields.video}"`);
+      console.log('是否应该使用原文件名:', fields.video === '视频名' || fields.video.trim() === '');
+      
       // 生成预览文件名（按比例分组的序号）- 每个比例组内第一个文件不加序号，后续文件使用普通数字
       let videoSuffix = '';
       if (ratioGroupIndex > 0) {
         videoSuffix = String(ratioGroupIndex + 1); // 第二个文件用2，第三个文件用3，以此类推
       }
-      const previewName = buildName(fields, ext, ratio, finalLanguage, videoDuration, videoSuffix);
+      // 获取原文件名（不含路径和扩展名）
+      const originalFileName = path.basename(filePath, ext);
+      const previewName = buildName(fields, ext, ratio, finalLanguage, videoDuration, videoSuffix, originalFileName);
       
       results.push({
         originalPath: filePath,

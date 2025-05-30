@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频名自动填入功能诊断测试</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body>
+  <div class="container mt-4">
+    <h2>视频名自动填入功能诊断测试</h2>
+    
+    <div class="row">
+      <div class="col-md-6">
+        <h4>测试表单</h4>
+        
+        <!-- 模拟主应用的表单字段 -->
+        <div class="mb-3">
+          <label for="product">产品名</label>
+          <input type="text" class="form-control" id="product" value="测试产品">
+        </div>
+        
+        <div class="mb-3">
+          <label for="template">模板名</label>
+          <input type="text" class="form-control" id="template" value="测试模板">
+        </div>
+        
+        <div class="mb-3">
+          <label for="video">视频名</label>
+          <input type="text" class="form-control" id="video" placeholder="留空测试自动填入">
+        </div>
+        
+        <div class="mb-3">
+          <label for="author">制作人</label>
+          <input type="text" class="form-control" id="author" value="测试制作人">
+        </div>
+        
+        <div class="mb-3">
+          <label for="duration">制作时长</label>
+          <input type="text" class="form-control" id="duration" value="1">
+        </div>
+        
+        <div class="mb-3">
+          <label for="language">语言代码</label>
+          <input type="text" class="form-control" id="language" placeholder="可选">
+        </div>
+        
+        <div class="mb-3">
+          <h5>测试场景</h5>
+          <button type="button" class="btn btn-primary btn-sm me-2 mb-2" onclick="testScenario1()">场景1: 空白视频名 + 带语言标识文件</button>
+          <button type="button" class="btn btn-secondary btn-sm me-2 mb-2" onclick="testScenario2()">场景2: 空白视频名 + 普通文件</button>
+          <button type="button" class="btn btn-info btn-sm me-2 mb-2" onclick="testScenario3()">场景3: 非空视频名</button>
+          <button type="button" class="btn btn-warning btn-sm me-2 mb-2" onclick="testGetFormFields()">测试 getFormFields</button>
+          <button type="button" class="btn btn-success btn-sm me-2 mb-2" onclick="testBuildName()">测试 buildName</button>
+        </div>
+        
+        <div class="mb-3">
+          <h5>手动测试</h5>
+          <button type="button" class="btn btn-dark btn-sm me-2 mb-2" onclick="clearVideoField()">清空视频名字段</button>
+          <button type="button" class="btn btn-outline-primary btn-sm me-2 mb-2" onclick="fillVideoField()">填入测试值</button>
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        <h4>诊断日志</h4>
+        <div id="debug-log" style="height: 500px; overflow-y: auto; background: #f8f9fa; padding: 10px; font-family: monospace; font-size: 12px;">
+          <!-- 日志将在这里显示 -->
+        </div>
+        <button type="button" class="btn btn-warning btn-sm" onclick="clearLog()">清空日志</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script>
+    // 重写console.log来显示在页面上
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    
+    function addLogEntry(message, type = 'log') {
+      const logDiv = document.getElementById('debug-log');
+      const timestamp = new Date().toLocaleTimeString();
+      const color = type === 'error' ? 'red' : type === 'warn' ? 'orange' : 'black';
+      
+      const entry = document.createElement('div');
+      entry.style.color = color;
+      entry.innerHTML = `[${timestamp}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      
+      // 也输出到原始console
+      if (type === 'error') {
+        originalError(message);
+      } else if (type === 'warn') {
+        originalWarn(message);
+      } else {
+        originalLog(message);
+      }
+    }
+    
+    console.log = function(...args) {
+      addLogEntry(args.join(' '), 'log');
+    };
+    
+    console.warn = function(...args) {
+      addLogEntry(args.join(' '), 'warn');
+    };
+    
+    console.error = function(...args) {
+      addLogEntry(args.join(' '), 'error');
+    };
+    
+    // 复制相关函数进行测试
+    function extractVideoName(filename) {
+      // 1. 去除文件扩展名
+      let name = filename.replace(/\.[^.]+$/, '');
+      
+      // 2. 去除语言标识 [xx]
+      name = name.replace(/\[[a-zA-Z]{2,3}\]/g, '');
+      
+      // 3. 清理多余空格
+      return name.trim();
+    }
+    
+    function autoFillVideoName(files) {
+      const videoField = document.getElementById('video');
+      console.log('=== autoFillVideoName 调试信息 ===');
+      console.log('当前视频字段值:', `"${videoField.value}"`);
+      console.log('trim后是否为空:', videoField.value.trim() === '');
+      console.log('文件数量:', files ? files.length : 0);
+      
+      if (videoField.value.trim() === '' && files && files.length > 0) {
+        // 取第一个文件的文件名进行提取
+        const firstFileName = files[0].split(/[/\\]/).pop();
+        console.log('第一个文件名:', firstFileName);
+        const extractedName = extractVideoName(firstFileName);
+        console.log('提取的视频名:', extractedName);
+        if (extractedName) {
+          videoField.value = extractedName;
+          console.log('自动填入视频名成功:', extractedName);
+        } else {
+          console.log('提取的视频名为空，未填入');
+        }
+      } else {
+        console.log('不满足自动填入条件');
+      }
+    }
+    
+    function getFormFields() {
+      const videoValue = document.getElementById('video').value.trim();
+      console.log('=== getFormFields 调试信息 ===');
+      console.log('原始视频名字段值:', `"${document.getElementById('video').value}"`);
+      console.log('trim后的视频名字段值:', `"${videoValue}"`);
+      console.log('视频名字段是否为空:', videoValue === '');
+      
+      const fields = {
+        product: document.getElementById('product').value.trim() || '产品名',
+        template: document.getElementById('template').value.trim() || '模板名',
+        video: videoValue || '视频名',
+        author: document.getElementById('author').value.trim() || '制作人',
+        duration: document.getElementById('duration').value.trim() || '1',
+        language: document.getElementById('language').value.trim() || ''
+      };
+      
+      console.log('最终字段值:', fields);
+      return fields;
+    }
+    
+    function buildName(fields, ext, ratio, language, videoDuration, videoSuffix = '') {
+      console.log('=== buildName 调试信息 ===');
+      console.log('传入的 fields.video:', `"${fields.video}"`);
+      console.log('fields.video 是否为默认值"视频名":', fields.video === '视频名');
+      console.log('videoSuffix:', videoSuffix);
+      
+      const videoName = videoSuffix ? `${fields.video}${videoSuffix}` : fields.video;
+      console.log('最终使用的 videoName:', `"${videoName}"`);
+      
+      // 简化的日期函数
+      const now = new Date();
+      const yy = String(now.getFullYear()).slice(-2);
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${yy}${mm}${dd}`;
+      
+      return `${todayStr}_P-${fields.product}_T-${fields.template}_C-${videoName}_S-${ratio}_L-${language}_VL-L-${videoDuration}_D-${fields.author}_M-${fields.duration}${ext}`;
+    }
+    
+    // 测试场景函数
+    function testScenario1() {
+      console.log('=== 测试场景1: 空白视频名 + 带语言标识文件 ===');
+      
+      // 清空视频名字段
+      document.getElementById('video').value = '';
+      
+      // 模拟文件选择
+      const testFiles = ['C:\\Users\\test\\video_test[en].mp4'];
+      console.log('模拟选择文件:', testFiles);
+      
+      // 测试自动填入
+      autoFillVideoName(testFiles);
+      
+      // 测试预览生成
+      const fields = getFormFields();
+      const previewName = buildName(fields, '.mp4', '169', 'en', '30', '');
+      console.log('生成的预览名称:', previewName);
+    }
+    
+    function testScenario2() {
+      console.log('=== 测试场景2: 空白视频名 + 普通文件 ===');
+      
+      // 清空视频名字段
+      document.getElementById('video').value = '';
+      
+      // 模拟文件选择
+      const testFiles = ['C:\\Users\\test\\my_video.mp4'];
+      console.log('模拟选择文件:', testFiles);
+      
+      // 测试自动填入
+      autoFillVideoName(testFiles);
+      
+      // 测试预览生成
+      const fields = getFormFields();
+      const previewName = buildName(fields, '.mp4', '169', 'unknown', '45', '');
+      console.log('生成的预览名称:', previewName);
+    }
+    
+    function testScenario3() {
+      console.log('=== 测试场景3: 非空视频名 ===');
+      
+      // 设置视频名字段
+      document.getElementById('video').value = '用户输入的视频名';
+      
+      // 模拟文件选择
+      const testFiles = ['C:\\Users\\test\\should_not_use_this[zh].mp4'];
+      console.log('模拟选择文件:', testFiles);
+      
+      // 测试自动填入（应该不会覆盖）
+      autoFillVideoName(testFiles);
+      
+      // 测试预览生成
+      const fields = getFormFields();
+      const previewName = buildName(fields, '.mp4', '169', 'zh', '60', '');
+      console.log('生成的预览名称:', previewName);
+    }
+    
+    function testGetFormFields() {
+      console.log('=== 单独测试 getFormFields 函数 ===');
+      const fields = getFormFields();
+      console.log('返回的字段对象:', JSON.stringify(fields, null, 2));
+    }
+    
+    function testBuildName() {
+      console.log('=== 单独测试 buildName 函数 ===');
+      const fields = getFormFields();
+      const result = buildName(fields, '.mp4', '169', 'en', '30', '');
+      console.log('buildName 结果:', result);
+    }
+    
+    function clearVideoField() {
+      document.getElementById('video').value = '';
+      console.log('视频名字段已清空');
+    }
+    
+    function fillVideoField() {
+      document.getElementById('video').value = '手动填入的视频名';
+      console.log('视频名字段已填入测试值');
+    }
+    
+    function clearLog() {
+      document.getElementById('debug-log').innerHTML = '';
+    }
+    
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('=== 视频名诊断测试页面加载完成 ===');
+      console.log('请使用上方按钮进行各种测试场景');
+    });
+  </script>
+</body>
+</html>

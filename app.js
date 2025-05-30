@@ -93,9 +93,9 @@ async function handleRenameFiles() {
   const duration = document.getElementById('duration').value.trim();
   const language = document.getElementById('language').value.trim();
   
-  // 验证必填字段
-  if (!product || !template || !video || !author || !duration) {
-    showAlert('请填写所有必填字段！', 'danger');
+  // 验证必填字段（视频名允许为空，将在buildName中处理）
+  if (!product || !template || !author || !duration) {
+    showAlert('请填写所有必填字段（产品名、模板名、制作人、制作时长）！', 'danger');
     return;
   }
   

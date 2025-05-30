@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频名空白修复测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-case {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-title {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .test-input {
+            background: #f8f9fa;
+            padding: 10px;
+            border-left: 4px solid #007bff;
+            margin: 10px 0;
+        }
+        .test-expected {
+            background: #d4edda;
+            padding: 10px;
+            border-left: 4px solid #28a745;
+            margin: 10px 0;
+        }
+        .code {
+            font-family: 'Courier New', monospace;
+            background: #e9ecef;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>视频名空白时自动使用原文件名功能修复测试</h1>
+    
+    <div class="test-case">
+        <h2 class="test-title">修复内容总结</h2>
+        <p>本次修复解决了视频名字段为空时无法自动使用原文件名的问题，涉及以下文件的修改：</p>
+        <ul>
+            <li><strong>ui.js</strong>: 移除 <span class="code">getFormFields()</span> 中视频名的默认值填充</li>
+            <li><strong>app.js</strong>: 修改验证逻辑，允许视频名字段为空</li>
+            <li><strong>fileRenamer.js</strong>: 增强 <span class="code">buildName()</span> 函数，添加空白检测和原文件名提取逻辑</li>
+            <li><strong>main.js</strong>: 更新 <span class="code">getFileMetadata()</span> 函数，传递原文件名参数</li>
+        </ul>
+    </div>
+
+    <div class="test-case">
+        <h2 class="test-title">测试用例 1: 基本空白视频名处理</h2>
+        <div class="test-input">
+            <strong>输入条件:</strong><br>
+            • 视频名字段: <span class="highlight">空白</span><br>
+            • 原文件名: <span class="code">test_video[en].mp4</span><br>
+            • 其他字段: 产品名=TestProduct, 模板名=TestTemplate, 制作人=TestAuthor, 制作时长=2
+        </div>
+        <div class="test-expected">
+            <strong>期望结果:</strong><br>
+            • 视频名应该自动提取为: <span class="code">test_video</span> (去除[en]和扩展名)<br>
+            • 最终文件名格式: <span class="code">YYMMDD_P-TestProduct_T-TestTemplate_C-test_video_S-比例_L-en_VL-L-时长_D-TestAuthor_M-2.mp4</span>
+        </div>
+    </div>
+
+    <div class="test-case">
+        <h2 class="test-title">测试用例 2: 多种语言标识处理</h2>
+        <div class="test-input">
+            <strong>输入条件:</strong><br>
+            • 视频名字段: <span class="highlight">空白</span><br>
+            • 原文件名: <span class="code">sample_content[zh].mov</span>
+        </div>
+        <div class="test-expected">
+            <strong>期望结果:</strong><br>
+            • 提取的视频名: <span class="code">sample_content</span><br>
+            • 语言代码: <span class="code">zh</span> (从文件名自动识别)
+        </div>
+    </div>
+
+    <div class="test-case">
+        <h2 class="test-title">测试用例 3: 无语言标识的文件</h2>
+        <div class="test-input">
+            <strong>输入条件:</strong><br>
+            • 视频名字段: <span class="highlight">空白</span><br>
+            • 原文件名: <span class="code">my_video_file.avi</span>
+        </div>
+        <div class="test-expected">
+            <strong>期望结果:</strong><br>
+            • 提取的视频名: <span class="code">my_video_file</span><br>
+            • 语言代码: <span class="code">unknown</span> (默认值)
+        </div>
+    </div>
+
+    <div class="test-case">
+        <h2 class="test-title">测试用例 4: 非空视频名正常功能</h2>
+        <div class="test-input">
+            <strong>输入条件:</strong><br>
+            • 视频名字段: <span class="code">CustomVideoName</span><br>
+            • 原文件名: <span class="code">original_file[fr].mp4</span>
+        </div>
+        <div class="test-expected">
+            <strong>期望结果:</strong><br>
+            • 使用用户输入的视频名: <span class="code">CustomVideoName</span><br>
+            • 不使用原文件名，保持原有功能不变
+        </div>
+    </div>
+
+    <div class="test-case">
+        <h2 class="test-title">关键修复点</h2>
+        <h3>1. ui.js 修复</h3>
+        <p><strong>修复前:</strong> <span class="code">video: videoValue || '视频名'</span></p>
+        <p><strong>修复后:</strong> <span class="code">video: videoValue</span></p>
+        <p>移除了默认值填充，允许空白值传递给后续处理逻辑。</p>
+
+        <h3>2. app.js 修复</h3>
+        <p><strong>修复前:</strong> <span class="code">if (!product || !template || !video || !author || !duration)</span></p>
+        <p><strong>修复后:</strong> <span class="code">if (!product || !template || !author || !duration)</span></p>
+        <p>移除了对视频名的必填验证，允许空白值进入重命名流程。</p>
+
+        <h3>3. fileRenamer.js 修复</h3>
+        <p><strong>新增功能:</strong> 在 <span class="code">buildName()</span> 函数中添加了空白检测逻辑：</p>
+        <ul>
+            <li>检测视频名是否为空或为默认值"视频名"</li>
+            <li>如果为空，调用 <span class="code">extractVideoName()</span> 从原文件名提取</li>
+            <li>自动过滤语言标识（如[en]、[zh]等）</li>
+            <li>保持向后兼容性</li>
+        </ul>
+
+        <h3>4. main.js 修复</h3>
+        <p><strong>新增:</strong> 在调用 <span class="code">buildName()</span> 时传递原文件名参数，确保预览功能也能正确显示。</p>
+    </div>
+
+    <div class="test-case">
+        <h2 class="test-title">测试步骤</h2>
+        <ol>
+            <li>启动应用程序</li>
+            <li>选择测试视频文件（文件名包含语言标识，如 <span class="code">test_video[en].mp4</span>）</li>
+            <li>填写其他必填字段（产品名、模板名、制作人、制作时长）</li>
+            <li><strong>保持视频名字段为空</strong></li>
+            <li>观察预览结果，确认视频名自动提取为 <span class="code">test_video</span></li>
+            <li>执行重命名操作</li>
+            <li>验证最终文件名是否正确使用了提取的视频名</li>
+        </ol>
+    </div>
+</body>
+</html>

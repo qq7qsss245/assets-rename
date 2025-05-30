@@ -28,14 +28,25 @@ function extractVideoName(filename) {
  */
 function autoFillVideoName(files) {
   const videoField = document.getElementById('video');
+  console.log('=== autoFillVideoName 调试信息 ===');
+  console.log('当前视频字段值:', `"${videoField.value}"`);
+  console.log('trim后是否为空:', videoField.value.trim() === '');
+  console.log('文件数量:', files ? files.length : 0);
+  
   if (videoField.value.trim() === '' && files && files.length > 0) {
     // 取第一个文件的文件名进行提取
     const firstFileName = files[0].split(/[/\\]/).pop();
+    console.log('第一个文件名:', firstFileName);
     const extractedName = extractVideoName(firstFileName);
+    console.log('提取的视频名:', extractedName);
     if (extractedName) {
       videoField.value = extractedName;
-      console.log('自动填入视频名:', extractedName);
+      console.log('自动填入视频名成功:', extractedName);
+    } else {
+      console.log('提取的视频名为空，未填入');
     }
+  } else {
+    console.log('不满足自动填入条件');
   }
 }
 
