@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>历史记录功能测试</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+</head>
+<body>
+  <div class="container mt-4">
+    <h2>历史记录功能诊断测试</h2>
+    
+    <div class="row">
+      <div class="col-md-6">
+        <h4>测试字段</h4>
+        
+        <!-- 产品名测试 -->
+        <div class="mb-3">
+          <label for="product">产品名</label>
+          <div class="input-group">
+            <input type="text" class="form-control" id="product" placeholder="请输入产品名">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="product">
+              <i class="bi bi-clock-history"></i>
+            </button>
+            <ul class="dropdown-menu" id="product-dropdown"></ul>
+          </div>
+        </div>
+        
+        <!-- 模板名测试 -->
+        <div class="mb-3">
+          <label for="template">模板名</label>
+          <div class="input-group">
+            <input type="text" class="form-control" id="template" placeholder="请输入模板名">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="template">
+              <i class="bi bi-clock-history"></i>
+            </button>
+            <ul class="dropdown-menu" id="template-dropdown"></ul>
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <h5>基础测试</h5>
+          <button type="button" class="btn btn-primary btn-sm me-2 mb-2" onclick="testAddHistory()">添加测试历史记录</button>
+          <button type="button" class="btn btn-secondary btn-sm me-2 mb-2" onclick="testClearInputs()">清空输入框</button>
+          <button type="button" class="btn btn-info btn-sm me-2 mb-2" onclick="testShowHistory()">显示历史记录</button>
+        </div>
+        
+        <div class="mb-3">
+          <h5>功能测试</h5>
+          <button type="button" class="btn btn-warning btn-sm me-2 mb-2" onclick="testEmptyInputSelection()">测试空输入框选择</button>
+          <button type="button" class="btn btn-success btn-sm me-2 mb-2" onclick="testNonEmptyInputSelection()">测试非空输入框选择</button>
+          <button type="button" class="btn btn-danger btn-sm me-2 mb-2" onclick="testAutoSelection()">自动选择测试</button>
+        </div>
+        
+        <div class="mb-3">
+          <h5>诊断工具</h5>
+          <button type="button" class="btn btn-dark btn-sm me-2 mb-2" onclick="runDiagnostics()">运行诊断</button>
+          <button type="button" class="btn btn-outline-primary btn-sm me-2 mb-2" onclick="refreshAllDropdowns()">刷新下拉菜单</button>
+          <button type="button" class="btn btn-outline-secondary btn-sm me-2 mb-2" onclick="safeInitializeDropdowns()">重新初始化</button>
+        </div>
+      </div>
+      
+      <div class="col-md-6">
+        <h4>诊断日志</h4>
+        <div id="debug-log" style="height: 400px; overflow-y: auto; background: #f8f9fa; padding: 10px; font-family: monospace; font-size: 12px;">
+          <!-- 日志将在这里显示 -->
+        </div>
+        <button type="button" class="btn btn-warning btn-sm" onclick="clearLog()">清空日志</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="history.js"></script>
+  
+  <script>
+    // 重写console.log来显示在页面上
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    
+    function addLogEntry(message, type = 'log') {
+      const logDiv = document.getElementById('debug-log');
+      const timestamp = new Date().toLocaleTimeString();
+      const color = type === 'error' ? 'red' : type === 'warn' ? 'orange' : 'black';
+      
+      const entry = document.createElement('div');
+      entry.style.color = color;
+      entry.innerHTML = `[${timestamp}] ${message}`;
+      logDiv.appendChild(entry);
+      logDiv.scrollTop = logDiv.scrollHeight;
+      
+      // 也输出到原始console
+      if (type === 'error') {
+        originalError(message);
+      } else if (type === 'warn') {
+        originalWarn(message);
+      } else {
+        originalLog(message);
+      }
+    }
+    
+    console.log = function(...args) {
+      addLogEntry(args.join(' '), 'log');
+    };
+    
+    console.warn = function(...args) {
+      addLogEntry(args.join(' '), 'warn');
+    };
+    
+    console.error = function(...args) {
+      addLogEntry(args.join(' '), 'error');
+    };
+    
+    // 测试函数
+    function testAddHistory() {
+      console.log('=== 开始测试添加历史记录 ===');
+      addToHistory('product', '测试产品' + Date.now());
+      addToHistory('template', '测试模板' + Date.now());
+    }
+    
+    function testClearInputs() {
+      console.log('=== 清空输入框 ===');
+      document.getElementById('product').value = '';
+      document.getElementById('template').value = '';
+    }
+    
+    function testShowHistory() {
+      console.log('=== 显示当前历史记录 ===');
+      const history = getHistory();
+      console.log('历史记录:', JSON.stringify(history, null, 2));
+    }
+    
+    function clearLog() {
+      document.getElementById('debug-log').innerHTML = '';
+    }
+    
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('=== 测试页面加载完成 ===');
+      console.log('开始初始化历史记录功能...');
+      
+      // 使用新的安全初始化函数
+      safeInitializeDropdowns();
+    });
+    
+    // 添加更多测试函数
+    function testEmptyInputSelection() {
+      console.log('=== 测试空输入框历史记录选择 ===');
+      
+      // 确保有历史记录
+      addToHistory('product', '测试产品空输入框');
+      addToHistory('template', '测试模板空输入框');
+      
+      // 清空输入框
+      document.getElementById('product').value = '';
+      document.getElementById('template').value = '';
+      
+      console.log('输入框已清空，请手动点击历史记录项测试');
+    }
+    
+    function testNonEmptyInputSelection() {
+      console.log('=== 测试非空输入框历史记录选择 ===');
+      
+      // 确保有历史记录
+      addToHistory('product', '新测试产品');
+      addToHistory('template', '新测试模板');
+      
+      // 设置输入框值
+      document.getElementById('product').value = '旧产品名';
+      document.getElementById('template').value = '旧模板名';
+      
+      console.log('输入框已设置值，请手动点击历史记录项测试替换功能');
+    }
+    
+    function runDiagnostics() {
+      console.log('=== 运行完整诊断 ===');
+      debugHistoryFunction();
+    }
+    
+    function testAutoSelection() {
+      console.log('=== 测试自动选择功能 ===');
+      testHistorySelection('product', '自动测试产品' + Date.now());
+    }
+  </script>
+</body>
+</html>

@@ -6,1018 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>批量重命名工具</title>
   <!-- Bootstrap CSS -->
-  <link href="node_modules/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUa6c4+JgvxXKp0veJGFjkr6l0IUbvdUPOKfIxhp+z9+nGenB4W7CvhvLaRV" crossorigin="anonymous">
   <!-- Bootstrap Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-  <style>
-    /* 全局样式 - 现代简约设计 */
-    :root {
-      --primary-color: #667eea;
-      --primary-hover: #5a6fd8;
-      --success-color: #48bb78;
-      --warning-color: #ed8936;
-      --danger-color: #f56565;
-      --info-color: #4299e1;
-      --gray-50: #f9fafb;
-      --gray-100: #f3f4f6;
-      --gray-200: #e5e7eb;
-      --gray-300: #d1d5db;
-      --gray-400: #9ca3af;
-      --gray-500: #6b7280;
-      --gray-600: #4b5563;
-      --gray-700: #374151;
-      --gray-800: #1f2937;
-      --gray-900: #111827;
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-      --border-radius: 12px;
-      --border-radius-sm: 8px;
-      --border-radius-lg: 16px;
-    }
-
-    body {
-      padding: 16px;
-      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-      min-height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      color: var(--gray-700);
-      line-height: 1.5;
-      overflow: hidden;
-    }
-    
-    .main-container {
-      max-width: 1400px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      height: calc(100vh - 32px);
-    }
-    
-    /* 重命名参数区域 - 紧凑设计 */
-    .params-section {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      border-radius: var(--border-radius);
-      padding: 20px;
-      box-shadow: var(--shadow-md);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      flex-shrink: 0;
-    }
-    
-    .params-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 16px;
-      align-items: end;
-    }
-    
-    .param-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    
-    .param-group label {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--gray-700);
-      margin-bottom: 0;
-      letter-spacing: 0.025em;
-    }
-    
-    .param-group .input-group {
-      height: 36px;
-      border-radius: var(--border-radius-sm);
-      overflow: hidden;
-      box-shadow: var(--shadow-sm);
-    }
-    
-    .param-group .form-control {
-      font-size: 0.8rem;
-      border: 2px solid var(--gray-200);
-      border-radius: var(--border-radius-sm);
-      padding: 8px 12px;
-      transition: all 0.2s ease;
-      background: white;
-      color: var(--gray-700);
-    }
-    
-    .param-group .form-control:focus {
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-      outline: none;
-    }
-    
-    .param-group .btn-outline-secondary {
-      border: 2px solid var(--gray-200);
-      border-left: none;
-      background: var(--gray-50);
-      color: var(--gray-500);
-      transition: all 0.2s ease;
-    }
-    
-    .param-group .btn-outline-secondary:hover {
-      background: var(--primary-color);
-      border-color: var(--primary-color);
-      color: white;
-    }
-    
-    .param-group .form-text {
-      font-size: 0.7rem;
-      color: var(--gray-500);
-      margin-top: 2px;
-      line-height: 1.3;
-    }
-    
-    /* 预览区域 - 紧凑设计 */
-    .preview-section {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow-md);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-      overflow: hidden;
-    }
-    
-    .preview-header {
-      padding: 16px 24px 12px;
-      border-bottom: 1px solid var(--gray-200);
-      background: linear-gradient(135deg, var(--gray-50) 0%, rgba(255, 255, 255, 0.8) 100%);
-      border-radius: var(--border-radius) var(--border-radius) 0 0;
-      flex-shrink: 0;
-    }
-    
-    .preview-header h5 {
-      color: var(--gray-800);
-      font-weight: 700;
-      font-size: 1rem;
-      margin: 0;
-      letter-spacing: -0.025em;
-    }
-    
-    .preview-body {
-      flex: 1;
-      padding: 0;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-    }
-    
-    .preview-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-      min-height: 0;
-    }
-    
-    /* 拖拽区域 - 紧凑设计 */
-    .drop-zone {
-      border: 2px dashed var(--gray-300);
-      border-radius: var(--border-radius);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      min-height: 200px;
-      position: relative;
-      cursor: pointer;
-      background: linear-gradient(135deg, var(--gray-50) 0%, rgba(255, 255, 255, 0.8) 100%);
-      overflow: hidden;
-    }
-    
-    .drop-zone::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(135deg, transparent 0%, rgba(102, 126, 234, 0.02) 100%);
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-    
-    .drop-zone:hover::before {
-      opacity: 1;
-    }
-    
-    .drop-zone:hover {
-      border-color: var(--primary-color);
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(255, 255, 255, 0.9) 100%);
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-lg);
-    }
-    
-    .drop-zone.drag-over {
-      border-color: var(--primary-color);
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(255, 255, 255, 0.9) 100%);
-      border-style: solid;
-      transform: scale(1.02);
-      box-shadow: var(--shadow-lg);
-    }
-    
-    .drop-zone-content {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      padding: 2rem;
-      text-align: center;
-      position: relative;
-      z-index: 1;
-    }
-    
-    .drop-zone-icon {
-      font-size: 3rem;
-      color: var(--gray-400);
-      margin-bottom: 1rem;
-      transition: all 0.3s ease;
-      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
-    }
-    
-    .drop-zone:hover .drop-zone-icon,
-    .drop-zone.drag-over .drop-zone-icon {
-      color: var(--primary-color);
-      transform: scale(1.1);
-    }
-    
-    .drop-zone-text {
-      color: var(--gray-600);
-      font-size: 1.1rem;
-      margin-bottom: 0.5rem;
-      font-weight: 600;
-      transition: all 0.3s ease;
-    }
-    
-    .drop-zone:hover .drop-zone-text,
-    .drop-zone.drag-over .drop-zone-text {
-      color: var(--primary-color);
-    }
-    
-    .drop-zone-hint {
-      color: var(--gray-500);
-      font-size: 0.8rem;
-      transition: all 0.3s ease;
-      line-height: 1.4;
-    }
-    
-    .drop-zone:hover .drop-zone-hint,
-    .drop-zone.drag-over .drop-zone-hint {
-      color: var(--primary-hover);
-    }
-    
-    /* 预览表格 - 现代化表格设计 */
-    .preview-table-container {
-      flex: 1;
-      overflow-y: auto;
-      border-radius: var(--border-radius-sm);
-      background: white;
-      box-shadow: var(--shadow-sm);
-    }
-    
-    .table {
-      margin: 0;
-      border-collapse: separate;
-      border-spacing: 0;
-    }
-    
-    .table th {
-      position: sticky;
-      top: 0;
-      background: linear-gradient(135deg, var(--gray-800) 0%, var(--gray-700) 100%);
-      color: white;
-      font-weight: 600;
-      font-size: 0.8rem;
-      padding: 12px 16px;
-      border: none;
-      letter-spacing: 0.025em;
-      z-index: 10;
-    }
-    
-    .table th:first-child {
-      border-radius: var(--border-radius-sm) 0 0 0;
-    }
-    
-    .table th:last-child {
-      border-radius: 0 var(--border-radius-sm) 0 0;
-    }
-    
-    .table td {
-      padding: 12px 16px;
-      border: none;
-      border-bottom: 1px solid var(--gray-100);
-      vertical-align: middle;
-      transition: background-color 0.2s ease;
-    }
-    
-    .table tbody tr:hover td {
-      background-color: var(--gray-50);
-    }
-    
-    .table tbody tr:nth-child(even) td {
-      background-color: rgba(249, 250, 251, 0.5);
-    }
-    
-    .table tbody tr:nth-child(even):hover td {
-      background-color: var(--gray-100);
-    }
-    
-    .preview-filename {
-      font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-      font-size: 0.75rem;
-      word-break: break-all;
-      line-height: 1.3;
-      color: var(--gray-700);
-    }
-    
-    .preview-status-success {
-      color: var(--success-color);
-      font-weight: 500;
-    }
-    
-    .preview-status-error {
-      color: var(--danger-color);
-      font-weight: 500;
-    }
-    
-    .preview-loading {
-      color: var(--gray-500);
-      font-style: italic;
-    }
-    
-    /* 操作按钮区域 - 紧凑设计 */
-    .actions-section {
-      padding: 20px;
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow-md);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      flex-shrink: 0;
-    }
-    
-    .actions-buttons {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    
-    .actions-buttons .btn {
-      flex: 1;
-      min-width: 140px;
-      max-width: 200px;
-      height: 40px;
-      border-radius: var(--border-radius-sm);
-      font-weight: 600;
-      font-size: 0.8rem;
-      letter-spacing: 0.025em;
-      transition: all 0.2s ease;
-      border: 2px solid transparent;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-    
-    .btn-outline-secondary {
-      background: white;
-      border-color: var(--gray-300);
-      color: var(--gray-600);
-    }
-    
-    .btn-outline-secondary:hover {
-      background: var(--gray-50);
-      border-color: var(--gray-400);
-      color: var(--gray-700);
-      transform: translateY(-1px);
-      box-shadow: var(--shadow);
-    }
-    
-    .btn-warning {
-      background: var(--warning-color);
-      border-color: var(--warning-color);
-      color: white;
-    }
-    
-    .btn-warning:hover:not(:disabled) {
-      background: #e07628;
-      border-color: #e07628;
-      transform: translateY(-1px);
-      box-shadow: var(--shadow);
-    }
-    
-    .btn-success {
-      background: var(--success-color);
-      border-color: var(--success-color);
-      color: white;
-    }
-    
-    .btn-success:hover {
-      background: #38a169;
-      border-color: #38a169;
-      transform: translateY(-1px);
-      box-shadow: var(--shadow);
-    }
-    
-    .btn:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-      transform: none !important;
-      box-shadow: none !important;
-    }
-    
-    /* 文件状态样式 - 现代化状态指示 */
-    .file-status-pending {
-      color: var(--gray-500);
-      font-weight: 500;
-    }
-    
-    .file-status-processing {
-      color: var(--info-color);
-      font-weight: 500;
-    }
-    
-    .file-status-success {
-      color: var(--success-color);
-      font-weight: 600;
-    }
-    
-    .file-status-error {
-      color: var(--danger-color);
-      font-weight: 600;
-    }
-    
-    .file-status-conflict {
-      color: var(--warning-color);
-      font-weight: 500;
-    }
-    
-    /* 字段验证状态 - 优雅的验证反馈 */
-    .field-valid {
-      border-color: var(--success-color) !important;
-      box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.1) !important;
-    }
-    
-    .field-invalid {
-      border-color: var(--danger-color) !important;
-      box-shadow: 0 0 0 3px rgba(245, 101, 101, 0.1) !important;
-    }
-    
-    .field-warning {
-      border-color: var(--warning-color) !important;
-      box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.1) !important;
-    }
-    
-    /* 进度条 - 现代化进度指示器 */
-    .progress {
-      height: 8px;
-      border-radius: 4px;
-      background-color: var(--gray-200);
-      overflow: hidden;
-      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
-    }
-    
-    .progress-bar {
-      background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-hover) 100%);
-      border-radius: 4px;
-      transition: width 0.3s ease;
-    }
-    
-    .progress-bar-animated {
-      background: linear-gradient(45deg,
-        rgba(255, 255, 255, 0.15) 25%,
-        transparent 25%,
-        transparent 50%,
-        rgba(255, 255, 255, 0.15) 50%,
-        rgba(255, 255, 255, 0.15) 75%,
-        transparent 75%,
-        transparent);
-      background-size: 1rem 1rem;
-      animation: progress-bar-stripes 1s linear infinite;
-    }
-    
-    @keyframes progress-bar-stripes {
-      0% { background-position: 1rem 0; }
-      100% { background-position: 0 0; }
-    }
-
-    /* 响应式设计优化 */
-    @media (max-height: 800px) {
-      body {
-        padding: 12px;
-        line-height: 1.4;
-      }
-      
-      .main-container {
-        gap: 12px;
-        height: calc(100vh - 24px);
-      }
-      
-      .params-section {
-        padding: 16px;
-      }
-      
-      .params-grid {
-        gap: 12px;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      }
-      
-      .param-group .input-group {
-        height: 32px;
-      }
-      
-      .param-group .form-control {
-        padding: 6px 10px;
-        font-size: 0.75rem;
-      }
-      
-      .param-group label {
-        font-size: 0.75rem;
-      }
-      
-      .param-group .form-text {
-        font-size: 0.65rem;
-      }
-      
-      .preview-header {
-        padding: 12px 20px 8px;
-      }
-      
-      .preview-header h5 {
-        font-size: 0.9rem;
-      }
-      
-      .preview-content {
-        padding: 16px;
-      }
-      
-      .drop-zone {
-        min-height: 160px;
-      }
-      
-      .drop-zone-content {
-        padding: 1.5rem;
-      }
-      
-      .drop-zone-icon {
-        font-size: 2.5rem;
-        margin-bottom: 0.75rem;
-      }
-      
-      .drop-zone-text {
-        font-size: 1rem;
-        margin-bottom: 0.25rem;
-      }
-      
-      .drop-zone-hint {
-        font-size: 0.75rem;
-      }
-      
-      .actions-section {
-        padding: 16px;
-      }
-      
-      .actions-buttons .btn {
-        height: 36px;
-        min-width: 120px;
-        font-size: 0.75rem;
-        gap: 4px;
-      }
-      
-      .table th {
-        padding: 8px 12px;
-        font-size: 0.75rem;
-      }
-      
-      .table td {
-        padding: 8px 12px;
-      }
-      
-      .preview-filename {
-        font-size: 0.7rem;
-        line-height: 1.2;
-      }
-    }
-
-    @media (max-height: 700px) {
-      .params-grid {
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 10px;
-      }
-      
-      .drop-zone {
-        min-height: 140px;
-      }
-      
-      .drop-zone-content {
-        padding: 1rem;
-      }
-      
-      .drop-zone-icon {
-        font-size: 2rem;
-        margin-bottom: 0.5rem;
-      }
-      
-      .drop-zone-text {
-        font-size: 0.9rem;
-      }
-      
-      .drop-zone-hint {
-        font-size: 0.7rem;
-      }
-    }
-
-    /* 宽屏优化 */
-    @media (min-width: 1200px) {
-      .params-grid {
-        grid-template-columns: repeat(3, 1fr);
-      }
-    }
-
-    @media (min-width: 1600px) {
-      .params-grid {
-        grid-template-columns: repeat(6, 1fr);
-      }
-    }
-    
-    /* 工具提示 - 现代化提示框 */
-    .tooltip-inner {
-      max-width: 320px;
-      padding: 12px 16px;
-      background: var(--gray-800);
-      border-radius: var(--border-radius-sm);
-      font-size: 0.875rem;
-      font-weight: 500;
-      text-align: left;
-      box-shadow: var(--shadow-lg);
-    }
-    
-    .tooltip.bs-tooltip-top .tooltip-arrow::before {
-      border-top-color: var(--gray-800);
-    }
-    
-    .tooltip.bs-tooltip-bottom .tooltip-arrow::before {
-      border-bottom-color: var(--gray-800);
-    }
-    
-    .tooltip.bs-tooltip-start .tooltip-arrow::before {
-      border-left-color: var(--gray-800);
-    }
-    
-    .tooltip.bs-tooltip-end .tooltip-arrow::before {
-      border-right-color: var(--gray-800);
-    }
-    
-    /* 加载动画 - 现代化加载指示器 */
-    .loading-spinner {
-      display: inline-block;
-      width: 1.25rem;
-      height: 1.25rem;
-      border: 2px solid var(--gray-200);
-      border-top: 2px solid var(--primary-color);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    /* 历史记录下拉菜单 - 优雅的下拉设计 */
-    .dropdown-menu {
-      max-height: 320px;
-      overflow-y: auto;
-      border: 1px solid var(--gray-200);
-      border-radius: var(--border-radius-sm);
-      box-shadow: var(--shadow-lg);
-      padding: 8px 0;
-      background: white;
-      backdrop-filter: blur(10px);
-    }
-    
-    .dropdown-item {
-      padding: 12px 16px;
-      font-size: 0.875rem;
-      color: var(--gray-700);
-      transition: all 0.2s ease;
-      border: none;
-      background: none;
-    }
-    
-    .dropdown-item:hover {
-      background: var(--gray-50);
-      color: var(--gray-800);
-    }
-    
-    .dropdown-item:active {
-      background: var(--primary-color);
-      color: white;
-    }
-    
-    .history-item-text {
-      word-break: break-all;
-      cursor: pointer;
-      flex-grow: 1;
-      padding: 4px 0;
-    }
-    
-    .dropdown-item .btn-outline-danger {
-      border: 1px solid var(--danger-color);
-      color: var(--danger-color);
-      background: white;
-      padding: 4px 8px;
-      font-size: 0.75rem;
-      border-radius: 4px;
-      transition: all 0.2s ease;
-    }
-    
-    .dropdown-item .btn-outline-danger:hover {
-      background: var(--danger-color);
-      color: white;
-    }
-    
-    .input-group .dropdown-toggle {
-      border-left: none;
-    }
-    
-    /* 响应式设计 - 移动端优化 */
-    @media (max-width: 1200px) {
-      .params-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 20px;
-      }
-      
-      .params-section {
-        padding: 24px;
-      }
-      
-      .preview-content {
-        padding: 24px;
-      }
-      
-      .actions-section {
-        padding: 24px;
-      }
-    }
-    
-    @media (max-width: 768px) {
-      body {
-        padding: 16px;
-      }
-      
-      .main-container {
-        gap: 16px;
-      }
-      
-      .params-grid {
-        grid-template-columns: 1fr;
-        gap: 16px;
-      }
-      
-      .params-section {
-        padding: 20px;
-      }
-      
-      .preview-header {
-        padding: 20px 24px 16px;
-      }
-      
-      .preview-content {
-        padding: 20px;
-      }
-      
-      .actions-section {
-        padding: 20px;
-      }
-      
-      .actions-buttons {
-        flex-direction: column;
-        gap: 12px;
-      }
-      
-      .actions-buttons .btn {
-        max-width: none;
-        min-width: auto;
-      }
-      
-      .preview-filename {
-        font-size: 0.75rem;
-      }
-      
-      .drop-zone {
-        min-height: 200px;
-      }
-      
-      .drop-zone-content {
-        padding: 2rem 1rem;
-      }
-      
-      .drop-zone-icon {
-        font-size: 3rem;
-      }
-      
-      .drop-zone-text {
-        font-size: 1.1rem;
-      }
-    }
-    
-    @media (max-width: 480px) {
-      body {
-        padding: 12px;
-      }
-      
-      .params-section,
-      .preview-header,
-      .preview-content,
-      .actions-section {
-        padding: 16px;
-      }
-      
-      .drop-zone-content {
-        padding: 1.5rem 0.75rem;
-      }
-      
-      .table th,
-      .table td {
-        padding: 12px 16px;
-      }
-    }
-    
-    /* Toast通知 - 现代化通知设计 */
-    .toast-container {
-      z-index: 9999 !important;
-    }
-    
-    .toast {
-      min-width: 320px;
-      border: none;
-      border-radius: var(--border-radius-sm);
-      box-shadow: var(--shadow-lg);
-      backdrop-filter: blur(10px);
-      overflow: hidden;
-    }
-    
-    .toast .toast-body {
-      font-size: 0.875rem;
-      font-weight: 500;
-      padding: 16px 20px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    
-    .toast .bi {
-      font-size: 1.25rem;
-      flex-shrink: 0;
-    }
-    
-    .toast.text-bg-success {
-      background: linear-gradient(135deg, var(--success-color) 0%, #38a169 100%);
-      color: white;
-    }
-    
-    .toast.text-bg-danger {
-      background: linear-gradient(135deg, var(--danger-color) 0%, #e53e3e 100%);
-      color: white;
-    }
-    
-    .toast.text-bg-warning {
-      background: linear-gradient(135deg, var(--warning-color) 0%, #d69e2e 100%);
-      color: white;
-    }
-    
-    .toast.text-bg-info {
-      background: linear-gradient(135deg, var(--info-color) 0%, #3182ce 100%);
-      color: white;
-    }
-    
-    .toast.text-bg-primary {
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
-      color: white;
-    }
-    
-    .btn-close-white {
-      filter: brightness(0) invert(1);
-      opacity: 0.8;
-    }
-    
-    .btn-close-white:hover {
-      opacity: 1;
-    }
-    
-    /* Toast动画 - 流畅的进入退出动画 */
-    .toast.showing {
-      animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .toast.hide {
-      animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    @keyframes slideInRight {
-      from {
-        transform: translateX(100%) scale(0.95);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0) scale(1);
-        opacity: 1;
-      }
-    }
-    
-    @keyframes slideOutRight {
-      from {
-        transform: translateX(0) scale(1);
-        opacity: 1;
-      }
-      to {
-        transform: translateX(100%) scale(0.95);
-        opacity: 0;
-      }
-    }
-    
-    /* 模态框优化 - 现代化对话框设计 */
-    .modal-content {
-      border: none;
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow-lg);
-      backdrop-filter: blur(10px);
-    }
-    
-    .modal-header {
-      border-bottom: 1px solid var(--gray-200);
-      padding: 24px 32px 20px;
-      background: linear-gradient(135deg, var(--gray-50) 0%, rgba(255, 255, 255, 0.8) 100%);
-      border-radius: var(--border-radius) var(--border-radius) 0 0;
-    }
-    
-    .modal-title {
-      font-weight: 700;
-      color: var(--gray-800);
-      font-size: 1.25rem;
-      letter-spacing: -0.025em;
-    }
-    
-    .modal-body {
-      padding: 32px;
-    }
-    
-    .modal-footer {
-      border-top: 1px solid var(--gray-200);
-      padding: 20px 32px 24px;
-      background: var(--gray-50);
-      border-radius: 0 0 var(--border-radius) var(--border-radius);
-    }
-    
-    /* 表单控件增强 */
-    .form-check-input:checked {
-      background-color: var(--primary-color);
-      border-color: var(--primary-color);
-    }
-    
-    .form-check-input:focus {
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-    
-    .alert {
-      border: none;
-      border-radius: var(--border-radius-sm);
-      padding: 16px 20px;
-      font-weight: 500;
-    }
-    
-    .alert-warning {
-      background: linear-gradient(135deg, rgba(237, 137, 54, 0.1) 0%, rgba(237, 137, 54, 0.05) 100%);
-      color: #b7791f;
-      border-left: 4px solid var(--warning-color);
-    }
-    
-    .alert-success {
-      background: linear-gradient(135deg, rgba(72, 187, 120, 0.1) 0%, rgba(72, 187, 120, 0.05) 100%);
-      color: #2f855a;
-      border-left: 4px solid var(--success-color);
-    }
-    
-    .alert-danger {
-      background: linear-gradient(135deg, rgba(245, 101, 101, 0.1) 0%, rgba(245, 101, 101, 0.05) 100%);
-      color: #c53030;
-      border-left: 4px solid var(--danger-color);
-    }
-    
-    .alert-info {
-      background: linear-gradient(135deg, rgba(66, 153, 225, 0.1) 0%, rgba(66, 153, 225, 0.05) 100%);
-      color: #2c5282;
-      border-left: 4px solid var(--info-color);
-    }
-  </style>
+  <!-- 自定义样式 -->
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="container-fluid">
@@ -1026,83 +19,75 @@
       <div class="params-section">
         <div class="params-grid">
           <div class="param-group">
-            <label for="product">产品名</label>
+            <label for="product">产品名 <span class="text-danger">*</span></label>
             <div class="input-group">
-              <input type="text" class="form-control" id="product" required>
+              <input type="text" class="form-control" id="product" placeholder="请输入产品名">
               <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="product" aria-expanded="false">
                 <i class="bi bi-clock-history"></i>
               </button>
-              <ul class="dropdown-menu" id="product-dropdown">
-                <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
-              </ul>
+              <ul class="dropdown-menu" id="product-dropdown"></ul>
             </div>
+            <div class="form-text">用于标识产品类型</div>
           </div>
           
           <div class="param-group">
-            <label for="template">模板名</label>
+            <label for="template">模板名 <span class="text-danger">*</span></label>
             <div class="input-group">
-              <input type="text" class="form-control" id="template" required>
+              <input type="text" class="form-control" id="template" placeholder="请输入模板名">
               <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="template" aria-expanded="false">
                 <i class="bi bi-clock-history"></i>
               </button>
-              <ul class="dropdown-menu" id="template-dropdown">
-                <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
-              </ul>
+              <ul class="dropdown-menu" id="template-dropdown"></ul>
             </div>
+            <div class="form-text">用于标识模板类型</div>
           </div>
           
           <div class="param-group">
-            <label for="video">视频名</label>
+            <label for="video">视频名 <span class="text-danger">*</span></label>
             <div class="input-group">
-              <input type="text" class="form-control" id="video" required>
+              <input type="text" class="form-control" id="video" placeholder="请输入视频名">
               <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="video" aria-expanded="false">
                 <i class="bi bi-clock-history"></i>
               </button>
-              <ul class="dropdown-menu" id="video-dropdown">
-                <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
-              </ul>
+              <ul class="dropdown-menu" id="video-dropdown"></ul>
             </div>
+            <div class="form-text">用于标识视频内容</div>
           </div>
           
           <div class="param-group">
-            <label for="author">制作人</label>
+            <label for="author">制作人 <span class="text-danger">*</span></label>
             <div class="input-group">
-              <input type="text" class="form-control" id="author" required>
+              <input type="text" class="form-control" id="author" placeholder="请输入制作人">
               <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="author" aria-expanded="false">
                 <i class="bi bi-clock-history"></i>
               </button>
-              <ul class="dropdown-menu" id="author-dropdown">
-                <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
-              </ul>
+              <ul class="dropdown-menu" id="author-dropdown"></ul>
             </div>
+            <div class="form-text">用于标识制作人员</div>
           </div>
           
           <div class="param-group">
-            <label for="duration">制作时长（小时）</label>
+            <label for="duration">制作时长（小时） <span class="text-danger">*</span></label>
             <div class="input-group">
-              <input type="text" class="form-control" id="duration" required>
+              <input type="number" class="form-control" id="duration" placeholder="1" min="0.1" step="0.1">
               <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="duration" aria-expanded="false">
                 <i class="bi bi-clock-history"></i>
               </button>
-              <ul class="dropdown-menu" id="duration-dropdown">
-                <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
-              </ul>
+              <ul class="dropdown-menu" id="duration-dropdown"></ul>
             </div>
-            <div class="form-text">请输入制作该视频所花费的时间（小时）</div>
+            <div class="form-text">制作耗时（小时）</div>
           </div>
           
           <div class="param-group">
             <label for="language">语言（可选）</label>
             <div class="input-group">
-              <input type="text" class="form-control" id="language" placeholder="如：en、zh、ja等">
+              <input type="text" class="form-control" id="language" placeholder="如：zh、en">
               <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="language" aria-expanded="false">
                 <i class="bi bi-clock-history"></i>
               </button>
-              <ul class="dropdown-menu" id="language-dropdown">
-                <li><span class="dropdown-item text-muted">暂无历史记录</span></li>
-              </ul>
+              <ul class="dropdown-menu" id="language-dropdown"></ul>
             </div>
-            <div class="form-text">手动指定语言代码，将覆盖从文件名自动识别的语言</div>
+            <div class="form-text">语言代码（可选）</div>
           </div>
         </div>
       </div>
@@ -1110,16 +95,16 @@
       <!-- 预览区域 -->
       <div class="preview-section">
         <div class="preview-header">
-          <h5 class="mb-0">重命名预览</h5>
+          <h5><i class="bi bi-eye me-2"></i>文件预览</h5>
         </div>
         <div class="preview-body">
           <div class="preview-content">
-            <!-- 默认状态：拖拽区域（可点击选择文件） -->
+            <!-- 拖拽区域 -->
             <div id="drop-zone" class="drop-zone">
               <div class="drop-zone-content">
                 <i class="bi bi-cloud-upload drop-zone-icon"></i>
-                <div class="drop-zone-text">点击选择文件或拖拽视频文件到此处</div>
-                <div class="drop-zone-hint">支持格式：MP4、MOV、AVI、MKV、FLV、WMV、WEBM</div>
+                <div class="drop-zone-text">拖拽视频文件到此处</div>
+                <div class="drop-zone-hint">或点击此区域选择文件<br>支持格式：MP4、MOV、AVI、MKV、FLV、WMV、WEBM</div>
               </div>
             </div>
             
@@ -1129,12 +114,11 @@
                 <table class="table table-striped table-hover mb-0">
                   <thead class="table-dark">
                     <tr>
-                      <th style="width: 50%">原文件名</th>
-                      <th style="width: 50%">预览新文件名</th>
+                      <th>原文件名</th>
+                      <th>预览新文件名</th>
                     </tr>
                   </thead>
                   <tbody id="preview-table-body">
-                    <!-- 预览数据将在这里动态生成 -->
                   </tbody>
                 </table>
               </div>
@@ -1146,20 +130,21 @@
       <!-- 操作按钮区域 -->
       <div class="actions-section">
         <div class="actions-buttons">
-          <button id="clear-fields" class="btn btn-outline-secondary">
-            <i class="bi bi-eraser me-2"></i>清空字段
+          <button type="button" class="btn btn-outline-secondary" id="clear-fields">
+            <i class="bi bi-arrow-clockwise me-1"></i>清空字段
           </button>
-          <button id="undo-rename" class="btn btn-warning" disabled>
-            <i class="bi bi-arrow-counterclockwise me-2"></i>撤回重命名
+          <button type="button" class="btn btn-warning" id="undo-rename" disabled title="没有可撤回的操作">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>撤回重命名
           </button>
-          <button id="rename-files" class="btn btn-success">
-            <i class="bi bi-check-circle me-2"></i>确认重命名
+          <button type="button" class="btn btn-success" id="rename-files">
+            <i class="bi bi-pencil-square me-1"></i>开始重命名
           </button>
         </div>
       </div>
     </div>
   </div>
-<!-- 进度显示模态框 -->
+
+  <!-- 进度对话框 -->
   <div class="modal fade" id="progressModal" tabindex="-1" aria-labelledby="progressModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
@@ -1171,39 +156,36 @@
         <div class="modal-body">
           <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
-              <span>总体进度</span>
+              <span>进度</span>
               <span id="progress-text">0 / 0</span>
             </div>
             <div class="progress mb-3">
-              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
-                   id="progress-bar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-              </div>
+              <div class="progress-bar progress-bar-animated" id="progress-bar" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
           </div>
           
           <div class="mb-3">
-            <strong>当前处理：</strong>
-            <div id="current-file" class="text-muted">准备开始...</div>
+            <strong>当前文件：</strong><span id="current-file" class="ms-2">准备开始...</span>
           </div>
           
           <div class="mb-3">
             <div class="row">
               <div class="col-4 text-center">
-                <div class="text-success h4" id="success-count">0</div>
+                <div class="text-success"><strong id="success-count">0</strong></div>
                 <small class="text-muted">成功</small>
               </div>
               <div class="col-4 text-center">
-                <div class="text-danger h4" id="error-count">0</div>
+                <div class="text-danger"><strong id="error-count">0</strong></div>
                 <small class="text-muted">失败</small>
               </div>
               <div class="col-4 text-center">
-                <div class="text-info h4" id="remaining-count">0</div>
+                <div class="text-info"><strong id="remaining-count">0</strong></div>
                 <small class="text-muted">剩余</small>
               </div>
             </div>
           </div>
           
-          <!-- 详细日志 -->
+          <!-- 日志区域 -->
           <div class="accordion" id="logAccordion">
             <div class="accordion-item">
               <h2 class="accordion-header" id="logHeading">
@@ -1215,8 +197,7 @@
               <div id="logCollapse" class="accordion-collapse collapse" aria-labelledby="logHeading"
                    data-bs-parent="#logAccordion">
                 <div class="accordion-body">
-                  <div id="progress-log" class="small" style="max-height: 200px; overflow-y: auto;">
-                    <!-- 日志内容 -->
+                  <div id="progress-log" style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.875rem;">
                   </div>
                 </div>
               </div>
@@ -1224,12 +205,8 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" id="cancel-operation" disabled>
-            <i class="bi bi-x-circle me-1"></i>取消操作
-          </button>
-          <button type="button" class="btn btn-primary" id="close-progress" style="display: none;">
-            <i class="bi bi-check-circle me-1"></i>完成
-          </button>
+          <button type="button" class="btn btn-outline-danger" id="cancel-operation">取消操作</button>
+          <button type="button" class="btn btn-primary" id="close-progress" style="display: none;">完成</button>
         </div>
       </div>
     </div>
@@ -1241,63 +218,61 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="confirmModalLabel">
-            <i class="bi bi-question-circle me-2"></i>确认重命名操作
+            <i class="bi bi-exclamation-triangle me-2"></i>确认重命名
           </h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <div class="alert alert-warning">
             <i class="bi bi-exclamation-triangle me-2"></i>
-            <strong>注意：</strong>此操作将重命名选中的文件，操作不可撤销。
+            <strong>注意：</strong>此操作将永久修改文件名，请确认无误后继续。
           </div>
-          <div id="confirm-summary">
-            <!-- 操作摘要 -->
-          </div>
+          
+          <div id="confirm-summary"></div>
+          
           <div class="mt-3">
             <div class="form-check">
               <input class="form-check-input" type="checkbox" id="confirm-checkbox">
               <label class="form-check-label" for="confirm-checkbox">
-                我确认要执行此重命名操作
+                我已确认上述文件名修改无误，同意执行重命名操作
               </label>
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-          <button type="button" class="btn btn-danger" id="confirm-rename" disabled>
-            <i class="bi bi-check-circle me-1"></i>确认重命名
-          </button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="button" class="btn btn-danger" id="confirm-rename" disabled>确认重命名</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- 文件名冲突检测结果模态框 -->
+  <!-- 冲突处理对话框 -->
   <div class="modal fade" id="conflictModal" tabindex="-1" aria-labelledby="conflictModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="conflictModalLabel">
-            <i class="bi bi-exclamation-triangle text-warning me-2"></i>文件名冲突检测
+            <i class="bi bi-exclamation-triangle me-2"></i>文件名冲突
           </h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
           <div class="alert alert-warning">
-            <strong>发现文件名冲突！</strong>以下文件将会产生相同的文件名：
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>检测到文件名冲突！</strong>以下文件的新名称与现有文件重复。
           </div>
-          <div id="conflict-list">
-            <!-- 冲突列表 -->
-          </div>
+          
+          <div id="conflict-list"></div>
+          
           <div class="mt-3">
             <p class="text-muted">
-              <i class="bi bi-info-circle me-1"></i>
-              系统将自动为冲突文件添加后缀以避免覆盖。
+              <strong>建议：</strong>请修改重命名参数以避免冲突，或者移动/重命名现有的冲突文件。
             </p>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">了解</button>
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">我知道了</button>
         </div>
       </div>
     </div>
@@ -1316,25 +291,23 @@
         <div class="modal-body">
           <div class="alert alert-warning">
             <i class="bi bi-exclamation-triangle me-2"></i>
-            <strong>注意：</strong>此操作将撤回最后一次批量重命名，将所有文件恢复到重命名前的状态。
+            <strong>注意：</strong>此操作将把文件名恢复到上次重命名前的状态。
           </div>
-          <div id="undo-details">
-            <!-- 撤回详情将在这里显示 -->
-          </div>
+          
+          <div id="undo-details"></div>
+          
           <div class="mt-3">
             <div class="form-check">
               <input class="form-check-input" type="checkbox" id="confirm-undo-checkbox">
               <label class="form-check-label" for="confirm-undo-checkbox">
-                我确认要撤回这些重命名操作
+                我确认要撤回上次的重命名操作
               </label>
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-          <button type="button" class="btn btn-warning" id="confirm-undo-btn" disabled>
-            <i class="bi bi-arrow-counterclockwise me-1"></i>确认撤回
-          </button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+          <button type="button" class="btn btn-warning" id="confirm-undo-btn" disabled>确认撤回</button>
         </div>
       </div>
     </div>
@@ -1346,1177 +319,38 @@
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="undoProgressModalLabel">
-            <i class="bi bi-arrow-counterclockwise me-2"></i>正在撤回重命名
+            <i class="bi bi-arrow-counterclockwise me-2"></i>正在撤回操作
           </h5>
         </div>
         <div class="modal-body">
           <div class="mb-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
               <span>撤回进度</span>
-              <span id="undo-progress-text">处理中...</span>
+              <span id="undo-progress-text">正在处理...</span>
             </div>
             <div class="progress mb-3">
-              <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" role="progressbar"
-                   id="undo-progress-bar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
-              </div>
+              <div class="progress-bar progress-bar-animated" role="progressbar" style="width: 100%"></div>
             </div>
           </div>
           
           <div id="undo-status" class="text-center">
-            <div class="loading-spinner me-2"></div>
-            正在撤回文件重命名...
+            <i class="bi bi-hourglass-split me-2"></i>正在撤回重命名操作，请稍候...
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-primary" id="close-undo-progress" style="display: none;">
-            <i class="bi bi-check-circle me-1"></i>完成
-          </button>
+          <button type="button" class="btn btn-primary" id="close-undo-progress" style="display: none;">完成</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Bootstrap JS -->
-  <script src="node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    let selectedFiles = [];
-    let previewData = [];
-    
-    // 支持的视频文件扩展名
-    const SUPPORTED_VIDEO_EXTENSIONS = ['mp4', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'webm'];
-    
-    // 预览管理器类
-    class PreviewManager {
-      constructor() {
-        this.previewContainer = document.getElementById('preview-container');
-        this.dropZone = document.getElementById('drop-zone');
-        this.previewTable = document.getElementById('preview-table');
-        this.previewTableBody = document.getElementById('preview-table-body');
-      }
-      
-      // 显示拖拽区域
-      showDropZone() {
-        this.dropZone.classList.remove('d-none');
-        this.previewTable.classList.add('d-none');
-        selectedFiles = [];
-        previewData = [];
-      }
-      
-      // 显示预览表格
-      showPreviewTable() {
-        this.dropZone.classList.add('d-none');
-        this.previewTable.classList.remove('d-none');
-      }
-      
-      // 更新预览数据
-      async updatePreview(files) {
-        if (!files || files.length === 0) {
-          this.showDropZone();
-          return;
-        }
-        
-        selectedFiles = files;
-        this.showPreviewTable();
-        
-        // 显示加载状态
-        this.showLoadingState(files);
-        
-        // 获取表单字段
-        const fields = this.getFormFields();
-        
-        // 获取文件元数据和预览名称
-        try {
-          const metadata = await window.electronAPI.getFileMetadata({ filePaths: files, fields });
-          previewData = metadata;
-          this.renderPreviewTable(metadata);
-        } catch (error) {
-          console.error('获取文件元数据失败:', error);
-          this.showErrorState(files, error.message);
-        }
-      }
-      
-      // 获取表单字段
-      getFormFields() {
-        return {
-          product: document.getElementById('product').value.trim() || '产品名',
-          template: document.getElementById('template').value.trim() || '模板名',
-          video: document.getElementById('video').value.trim() || '视频名',
-          author: document.getElementById('author').value.trim() || '制作人',
-          duration: document.getElementById('duration').value.trim() || '1',
-          language: document.getElementById('language').value.trim() || ''
-        };
-      }
-      
-      // 显示加载状态
-      showLoadingState(files) {
-        let html = '';
-        files.forEach((filePath, index) => {
-          const fileName = filePath.split(/[/\\]/).pop();
-          html += `
-            <tr>
-              <td class="preview-filename">${fileName}</td>
-              <td class="preview-filename preview-loading">
-                <i class="bi bi-hourglass-split me-2"></i>正在生成预览...
-              </td>
-            </tr>
-          `;
-        });
-        this.previewTableBody.innerHTML = html;
-      }
-      
-      // 显示错误状态
-      showErrorState(files, errorMessage) {
-        let html = '';
-        files.forEach((filePath, index) => {
-          const fileName = filePath.split(/[/\\]/).pop();
-          html += `
-            <tr>
-              <td class="preview-filename">${fileName}</td>
-              <td class="preview-filename preview-status-error">
-                <i class="bi bi-exclamation-triangle me-2"></i>预览生成失败
-              </td>
-            </tr>
-          `;
-        });
-        this.previewTableBody.innerHTML = html;
-      }
-      
-      // 渲染预览表格
-      renderPreviewTable(metadata) {
-        let html = '';
-        
-        metadata.forEach((item, index) => {
-          const previewClass = item.success ? 'preview-status-success' : 'preview-status-error';
-          
-          html += `
-            <tr>
-              <td class="preview-filename" title="${item.originalPath || item.originalName}">
-                ${item.originalName}
-              </td>
-              <td class="preview-filename ${previewClass}" title="${item.previewName}">
-                ${item.previewName}
-              </td>
-            </tr>
-          `;
-        });
-        
-        this.previewTableBody.innerHTML = html;
-      }
-      
-      // 实时更新预览（当表单字段变更时）
-      async refreshPreview() {
-        if (selectedFiles.length === 0) return;
-        
-        // 显示加载状态
-        this.showLoadingState(selectedFiles);
-        
-        // 获取表单字段
-        const fields = this.getFormFields();
-        
-        // 重新获取预览数据
-        try {
-          const metadata = await window.electronAPI.getFileMetadata({ filePaths: selectedFiles, fields });
-          previewData = metadata;
-          this.renderPreviewTable(metadata);
-        } catch (error) {
-          console.error('刷新预览失败:', error);
-          this.showErrorState(selectedFiles, error.message);
-        }
-      }
-    }
-    
-    // 创建预览管理器实例
-    const previewManager = new PreviewManager();
-// 历史记录管理
-    const STORAGE_KEY = 'renameToolHistory';
-    const fieldNames = ['product', 'template', 'video', 'author', 'duration', 'language'];
-    
-    // 获取历史记录
-    function getHistory() {
-      const defaultHistory = {
-        product: [],
-        template: [],
-        video: [],
-        author: [],
-        duration: [],
-        language: []
-      };
-      
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          // 确保所有字段都存在，向后兼容旧版本数据
-          const history = { ...defaultHistory };
-          for (const fieldName of fieldNames) {
-            if (parsed[fieldName] && Array.isArray(parsed[fieldName])) {
-              history[fieldName] = parsed[fieldName];
-            }
-          }
-          return history;
-        } catch (e) {
-          console.error('Failed to parse history data:', e);
-        }
-      }
-      // 返回默认结构
-      return defaultHistory;
-    }
-    
-    // 保存历史记录
-    function saveHistory(history) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-      } catch (e) {
-        console.error('Failed to save history data:', e);
-      }
-    }
-    
-    // 添加到历史记录
-    function addToHistory(fieldName, value) {
-      if (!value || !value.trim()) return;
-      
-      // 验证字段名是否有效
-      if (!fieldNames.includes(fieldName)) {
-        console.warn('Invalid field name for history:', fieldName);
-        return;
-      }
-      
-      console.log(`Adding to history - Field: ${fieldName}, Value: ${value}`);
-      
-      const history = getHistory();
-      const trimmedValue = value.trim();
-      
-      // 确保字段存在且为数组
-      if (!history[fieldName] || !Array.isArray(history[fieldName])) {
-        console.log(`Initializing history array for field: ${fieldName}`);
-        history[fieldName] = [];
-      }
-      
-      // 如果已存在，先移除再添加到开头
-      const index = history[fieldName].indexOf(trimmedValue);
-      if (index > -1) {
-        history[fieldName].splice(index, 1);
-      }
-      
-      // 添加到开头
-      history[fieldName].unshift(trimmedValue);
-      
-      // 限制历史记录数量（最多20条）
-      if (history[fieldName].length > 20) {
-        history[fieldName] = history[fieldName].slice(0, 20);
-      }
-      
-      console.log(`History updated for ${fieldName}:`, history[fieldName]);
-      
-      saveHistory(history);
-      updateDropdown(fieldName);
-    }
-    
-    // 从历史记录中删除
-    function removeFromHistory(fieldName, value) {
-      // 验证字段名是否有效
-      if (!fieldNames.includes(fieldName)) {
-        console.warn('Invalid field name for history:', fieldName);
-        return;
-      }
-      
-      const history = getHistory();
-      
-      // 确保字段存在且为数组
-      if (!history[fieldName] || !Array.isArray(history[fieldName])) {
-        return;
-      }
-      
-      const index = history[fieldName].indexOf(value);
-      if (index > -1) {
-        history[fieldName].splice(index, 1);
-        saveHistory(history);
-        updateDropdown(fieldName);
-      }
-    }
-    
-    // 更新下拉菜单
-    function updateDropdown(fieldName) {
-      // 验证字段名是否有效
-      if (!fieldNames.includes(fieldName)) {
-        console.warn('Invalid field name for dropdown:', fieldName);
-        return;
-      }
-      
-      const history = getHistory();
-      const dropdown = document.getElementById(`${fieldName}-dropdown`);
-      
-      // 检查下拉菜单元素是否存在
-      if (!dropdown) {
-        console.warn('Dropdown element not found:', `${fieldName}-dropdown`);
-        return;
-      }
-      
-      const items = history[fieldName] || [];
-      
-      dropdown.innerHTML = '';
-      
-      if (items.length === 0) {
-        dropdown.innerHTML = '<li><span class="dropdown-item text-muted">暂无历史记录</span></li>';
-        return;
-      }
-      
-      items.forEach(item => {
-        const li = document.createElement('li');
-        li.innerHTML = `
-          <div class="dropdown-item d-flex justify-content-between align-items-center">
-            <span class="history-item-text" style="cursor: pointer; flex-grow: 1;">${item}</span>
-            <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeFromHistory('${fieldName}', '${item}')" title="删除">
-              <i class="bi bi-trash"></i>
-            </button>
-          </div>
-        `;
-        
-        // 点击文本选择该项
-        li.querySelector('.history-item-text').addEventListener('click', () => {
-          document.getElementById(fieldName).value = item;
-          // 关闭下拉菜单
-          const dropdownToggle = document.querySelector(`[data-bs-toggle="dropdown"][data-field="${fieldName}"]`);
-          const dropdown = bootstrap.Dropdown.getInstance(dropdownToggle);
-          if (dropdown) dropdown.hide();
-        });
-        
-        dropdown.appendChild(li);
-      });
-    }
-    
-    // 更新文件列表显示（现在使用预览管理器）
-    async function updateFileListDisplay(files) {
-      await previewManager.updatePreview(files);
-    }
-// 拖拽事件处理
-    function setupDragAndDrop() {
-      const fileListDiv = document.getElementById('drop-zone');
-      
-      // 阻止默认拖拽行为
-      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        fileListDiv.addEventListener(eventName, preventDefaults, false);
-        document.body.addEventListener(eventName, preventDefaults, false);
-      });
-      
-      // 高亮拖拽区域
-      ['dragenter', 'dragover'].forEach(eventName => {
-        fileListDiv.addEventListener(eventName, highlight, false);
-      });
-      
-      // 取消高亮
-      ['dragleave', 'drop'].forEach(eventName => {
-        fileListDiv.addEventListener(eventName, unhighlight, false);
-      });
-      
-      // 处理文件拖拽
-      fileListDiv.addEventListener('drop', handleDrop, false);
-      
-      // 添加点击事件处理（合并文件选择功能）
-      fileListDiv.addEventListener('click', async () => {
-        console.log('=== 点击拖拽区域选择文件 ===');
-        
-        const files = await window.electronAPI.selectFiles();
-        console.log('点击选择文件数量:', files ? files.length : 0);
-        
-        if (files && files.length > 0) {
-          selectedFiles = files;
-          updateFileListDisplay(files);
-          
-          // 自动填入视频名
-          autoFillVideoName(files);
-          showAlert(`成功选择 ${files.length} 个视频文件`, 'success');
-        }
-      });
-      
-      function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-      
-      function highlight(e) {
-        fileListDiv.classList.add('drag-over');
-      }
-      
-      function unhighlight(e) {
-        fileListDiv.classList.remove('drag-over');
-      }
-      
-      function handleDrop(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        
-        handleFiles(files);
-      }
-      
-      async function handleFiles(files) {
-        const fileArray = Array.from(files);
-        
-        console.log('=== 拖拽文件处理 ===');
-        console.log('拖拽文件数量:', fileArray.length);
-        
-        // 修复：使用 Electron 的 webUtils.getPathForFile() 获取拖拽文件路径
-        const filePaths = [];
-        
-        for (let i = 0; i < fileArray.length; i++) {
-          const file = fileArray[i];
-          let filePath = file.path;
-          
-          // 如果 path 为 undefined，使用 webUtils.getPathForFile() 获取路径
-          if (!filePath && window.electronAPI && window.electronAPI.getPathForFile) {
-            try {
-              filePath = await window.electronAPI.getPathForFile(file);
-              console.log(`文件 ${i + 1}: ${file.name} -> 路径获取成功`);
-            } catch (error) {
-              console.log(`文件 ${i + 1}: ${file.name} -> 路径获取失败:`, error);
-            }
-          }
-          
-          if (filePath) {
-            filePaths.push(filePath);
-          } else {
-            console.log(`文件 ${i + 1}: ${file.name} -> 无法获取路径`);
-          }
-        }
-        
-        if (filePaths.length === 0) {
-          showAlert('无法获取拖拽文件的路径，请使用点击选择文件功能', 'danger');
-          return;
-        }
-        
-        try {
-          const { validFiles, invalidFiles } = await window.electronAPI.validateVideoFiles(filePaths);
-          
-          if (validFiles.length > 0) {
-            selectedFiles = validFiles;
-            updateFileListDisplay(validFiles);
-            
-            // 自动填入视频名
-            autoFillVideoName(validFiles);
-            
-            if (invalidFiles.length > 0) {
-              const invalidNames = invalidFiles.map(path => path.split(/[/\\]/).pop());
-              showAlert(
-                `成功添加 ${validFiles.length} 个视频文件。忽略了 ${invalidFiles.length} 个不支持的文件：${invalidNames.join(', ')}`,
-                'warning'
-              );
-            } else {
-              showAlert(`成功添加 ${validFiles.length} 个视频文件`, 'success');
-            }
-          } else {
-            if (invalidFiles.length > 0) {
-              const invalidNames = invalidFiles.map(path => path.split(/[/\\]/).pop());
-              showAlert(
-                `不支持的文件格式：${invalidNames.join(', ')}。请选择视频文件（${SUPPORTED_VIDEO_EXTENSIONS.join(', ')}）`,
-                'danger'
-              );
-            }
-          }
-        } catch (error) {
-          console.error('文件验证失败:', error);
-          showAlert('文件验证失败，请重试', 'danger');
-        }
-      }
-    }
-    
-    // 初始化所有下拉菜单并填充默认值
-    function initializeDropdowns() {
-      const history = getHistory();
-      
-      fieldNames.forEach(fieldName => {
-        updateDropdown(fieldName);
-        
-        // 如果有历史记录，填充最近使用的值（第一个）
-        if (history[fieldName] && history[fieldName].length > 0) {
-          const lastUsedValue = history[fieldName][0];
-          document.getElementById(fieldName).value = lastUsedValue;
-        }
-      });
-    }
-// 进度管理器类
-    class ProgressManager {
-      constructor() {
-        this.modal = null;
-        this.progressBar = null;
-        this.progressText = null;
-        this.currentFile = null;
-        this.successCount = null;
-        this.errorCount = null;
-        this.remainingCount = null;
-        this.progressLog = null;
-        this.isCancelled = false;
-      }
-      
-      init() {
-        this.modal = new bootstrap.Modal(document.getElementById('progressModal'));
-        this.progressBar = document.getElementById('progress-bar');
-        this.progressText = document.getElementById('progress-text');
-        this.currentFile = document.getElementById('current-file');
-        this.successCount = document.getElementById('success-count');
-        this.errorCount = document.getElementById('error-count');
-        this.remainingCount = document.getElementById('remaining-count');
-        this.progressLog = document.getElementById('progress-log');
-        
-        // 取消按钮事件
-        document.getElementById('cancel-operation').addEventListener('click', () => {
-          this.cancel();
-        });
-        
-        // 完成按钮事件
-        document.getElementById('close-progress').addEventListener('click', () => {
-          this.close();
-        });
-      }
-      
-      show(totalFiles) {
-        this.isCancelled = false;
-        this.reset();
-        this.remainingCount.textContent = totalFiles;
-        this.progressText.textContent = `0 / ${totalFiles}`;
-        this.modal.show();
-        
-        // 启用取消按钮
-        document.getElementById('cancel-operation').disabled = false;
-        document.getElementById('close-progress').style.display = 'none';
-      }
-      
-      updateProgress(current, total, fileName) {
-        if (this.isCancelled) return;
-        
-        const percentage = Math.round((current / total) * 100);
-        this.progressBar.style.width = `${percentage}%`;
-        this.progressBar.setAttribute('aria-valuenow', percentage);
-        this.progressText.textContent = `${current} / ${total}`;
-        this.currentFile.textContent = fileName;
-        this.remainingCount.textContent = total - current;
-      }
-      
-      updateCounts(success, error) {
-        this.successCount.textContent = success;
-        this.errorCount.textContent = error;
-      }
-      
-      addLog(message, type = 'info') {
-        const timestamp = new Date().toLocaleTimeString();
-        const logClass = type === 'error' ? 'text-danger' : type === 'success' ? 'text-success' : 'text-muted';
-        const logEntry = document.createElement('div');
-        logEntry.className = `small ${logClass}`;
-        logEntry.innerHTML = `<span class="text-muted">[${timestamp}]</span> ${message}`;
-        this.progressLog.appendChild(logEntry);
-        this.progressLog.scrollTop = this.progressLog.scrollHeight;
-      }
-      
-      complete() {
-        this.currentFile.textContent = '处理完成';
-        this.progressBar.classList.remove('progress-bar-animated');
-        
-        // 禁用取消按钮，显示完成按钮
-        document.getElementById('cancel-operation').disabled = true;
-        document.getElementById('close-progress').style.display = 'inline-block';
-        
-        this.addLog('所有文件处理完成', 'success');
-      }
-      
-      cancel() {
-        this.isCancelled = true;
-        this.currentFile.textContent = '操作已取消';
-        this.addLog('用户取消了操作', 'error');
-        this.complete();
-      }
-      
-      close() {
-        this.modal.hide();
-      }
-      
-      reset() {
-        this.progressBar.style.width = '0%';
-        this.progressBar.classList.add('progress-bar-animated');
-        this.successCount.textContent = '0';
-        this.errorCount.textContent = '0';
-        this.remainingCount.textContent = '0';
-        this.progressLog.innerHTML = '';
-        this.currentFile.textContent = '准备开始...';
-      }
-    }
-    
-    // 创建进度管理器实例
-    const progressManager = new ProgressManager();
-    
-    // 字段验证器
-    class FieldValidator {
-      static validateField(fieldName, value) {
-        const field = document.getElementById(fieldName);
-        let isValid = true;
-        let message = '';
-        
-        switch (fieldName) {
-          case 'product':
-          case 'template':
-          case 'video':
-          case 'author':
-            if (!value || value.trim().length === 0) {
-              isValid = false;
-              message = '此字段不能为空';
-            } else if (value.trim().length > 50) {
-              isValid = false;
-              message = '字段长度不能超过50个字符';
-            } else if (!/^[a-zA-Z0-9\u4e00-\u9fa5_-]+$/.test(value.trim())) {
-              isValid = false;
-              message = '只能包含字母、数字、中文、下划线和连字符';
-            }
-            break;
-          case 'duration':
-            const num = parseFloat(value);
-            if (!value || isNaN(num) || num <= 0) {
-              isValid = false;
-              message = '必须是大于0的数字';
-            } else if (num > 1000) {
-              isValid = false;
-              message = '制作时长不能超过1000小时';
-            }
-            break;
-          case 'language':
-            // 语言字段为可选，如果填写则验证格式
-            if (value && value.trim().length > 0) {
-              const trimmedValue = value.trim();
-              if (trimmedValue.length > 10) {
-                isValid = false;
-                message = '语言代码长度不能超过10个字符';
-              } else if (!/^[a-zA-Z0-9_-]+$/.test(trimmedValue)) {
-                isValid = false;
-                message = '语言代码只能包含字母、数字、下划线和连字符';
-              }
-            }
-            break;
-        }
-        
-        // 更新字段样式
-        field.classList.remove('field-valid', 'field-invalid', 'field-warning');
-        if (isValid) {
-          field.classList.add('field-valid');
-        } else {
-          field.classList.add('field-invalid');
-        }
-        
-        // 更新工具提示
-        field.title = message || '';
-        
-        return { isValid, message };
-      }
-      
-      static validateAllFields() {
-        const requiredFields = ['product', 'template', 'video', 'author', 'duration'];
-        const optionalFields = ['language'];
-        let allValid = true;
-        const errors = [];
-        
-        // 验证必填字段
-        requiredFields.forEach(fieldName => {
-          const value = document.getElementById(fieldName).value;
-          const result = this.validateField(fieldName, value);
-          if (!result.isValid) {
-            allValid = false;
-            errors.push(`${fieldName}: ${result.message}`);
-          }
-        });
-        
-        // 验证可选字段（只有在有值时才验证）
-        optionalFields.forEach(fieldName => {
-          const value = document.getElementById(fieldName).value;
-          if (value && value.trim().length > 0) {
-            const result = this.validateField(fieldName, value);
-            if (!result.isValid) {
-              allValid = false;
-              errors.push(`${fieldName}: ${result.message}`);
-            }
-          }
-        });
-        
-        return { allValid, errors };
-      }
-    }
-// 显示确认对话框
-    function showConfirmDialog(filesToRename) {
-      return new Promise((resolve) => {
-        const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
-        const confirmSummary = document.getElementById('confirm-summary');
-        const confirmCheckbox = document.getElementById('confirm-checkbox');
-        const confirmBtn = document.getElementById('confirm-rename');
-        
-        // 生成摘要
-        let summaryHtml = `
-          <div class="mb-3">
-            <strong>即将重命名 ${filesToRename.length} 个文件：</strong>
-          </div>
-          <div class="list-group" style="max-height: 200px; overflow-y: auto;">
-        `;
-        
-        filesToRename.forEach(item => {
-          summaryHtml += `
-            <div class="list-group-item">
-              <div class="d-flex justify-content-between">
-                <span class="text-muted small">${item.originalName}</span>
-                <i class="bi bi-arrow-right mx-2"></i>
-                <span class="small">${item.previewName}</span>
-              </div>
-            </div>
-          `;
-        });
-        
-        summaryHtml += '</div>';
-        confirmSummary.innerHTML = summaryHtml;
-        
-        // 重置状态
-        confirmCheckbox.checked = false;
-        confirmBtn.disabled = true;
-        
-        // 确认复选框事件
-        confirmCheckbox.onchange = () => {
-          confirmBtn.disabled = !confirmCheckbox.checked;
-        };
-        
-        // 确认按钮事件
-        confirmBtn.onclick = () => {
-          modal.hide();
-          resolve(true);
-        };
-        
-        // 模态框关闭事件
-        document.getElementById('confirmModal').addEventListener('hidden.bs.modal', () => {
-          resolve(false);
-        }, { once: true });
-        
-        modal.show();
-      });
-    }
-    
-    // 智能文件名提取函数
-    function extractVideoName(filename) {
-      // 1. 去除文件扩展名
-      let name = filename.replace(/\.[^.]+$/, '');
-      
-      // 2. 去除语言标识 [xx]
-      name = name.replace(/\[[a-zA-Z]{2,3}\]/g, '');
-      
-      // 3. 清理多余空格
-      return name.trim();
-    }
-    
-    // 自动填入视频名（仅当视频名字段为空时）
-    function autoFillVideoName(files) {
-      const videoField = document.getElementById('video');
-      if (videoField.value.trim() === '' && files && files.length > 0) {
-        // 取第一个文件的文件名进行提取
-        const firstFileName = files[0].split(/[/\\]/).pop();
-        const extractedName = extractVideoName(firstFileName);
-        if (extractedName) {
-          videoField.value = extractedName;
-          console.log('自动填入视频名:', extractedName);
-        }
-      }
-    }
-
-    // 撤回功能管理器
-    class UndoManager {
-      constructor() {
-        console.log('=== 初始化撤回管理器 ===');
-        this.undoButton = document.getElementById('undo-rename');
-        console.log('撤回按钮元素:', this.undoButton);
-        this.setupEventListeners();
-        this.updateUndoButtonState();
-      }
-      
-      setupEventListeners() {
-        // 撤回按钮点击事件
-        this.undoButton.addEventListener('click', () => {
-          console.log('=== 撤回按钮被点击 ===');
-          console.log('按钮状态 - disabled:', this.undoButton.disabled);
-          console.log('按钮标题:', this.undoButton.title);
-          this.showUndoConfirmDialog();
-        });
-        
-        // 撤回确认对话框事件
-        document.getElementById('confirm-undo-checkbox').addEventListener('change', (e) => {
-          document.getElementById('confirm-undo-btn').disabled = !e.target.checked;
-        });
-        
-        document.getElementById('confirm-undo-btn').addEventListener('click', () => {
-          this.performUndo();
-        });
-        
-        document.getElementById('close-undo-progress').addEventListener('click', () => {
-          bootstrap.Modal.getInstance(document.getElementById('undoProgressModal')).hide();
-        });
-      }
-      
-      async updateUndoButtonState() {
-        console.log('=== 更新撤回按钮状态 ===');
-        try {
-          const status = await window.electronAPI.getUndoStatus();
-          console.log('撤回状态:', status);
-          
-          this.undoButton.disabled = !status.canUndo;
-          
-          if (status.canUndo) {
-            this.undoButton.title = status.message;
-            console.log('撤回按钮已启用:', status.message);
-          } else {
-            this.undoButton.title = '没有可撤回的操作';
-            console.log('撤回按钮已禁用: 没有可撤回的操作');
-          }
-        } catch (error) {
-          console.error('获取撤回状态失败:', error);
-          this.undoButton.disabled = true;
-        }
-      }
-      
-      async showUndoConfirmDialog() {
-        try {
-          const status = await window.electronAPI.getUndoStatus();
-          
-          if (!status.canUndo) {
-            showAlert('没有可撤回的重命名操作', 'info');
-            return;
-          }
-          
-          // 显示撤回详情
-          const detailsHtml = `
-            <div class="mb-2">
-              <strong>操作时间：</strong>${new Date(status.timestamp).toLocaleString()}
-            </div>
-            <div class="mb-2">
-              <strong>文件数量：</strong>${status.operationCount} 个文件
-            </div>
-            <div class="text-muted small">
-              此操作将把这些文件的名称恢复到重命名前的状态。
-            </div>
-          `;
-          
-          document.getElementById('undo-details').innerHTML = detailsHtml;
-          
-          // 重置确认复选框
-          document.getElementById('confirm-undo-checkbox').checked = false;
-          document.getElementById('confirm-undo-btn').disabled = true;
-          
-          // 显示确认对话框
-          const modal = new bootstrap.Modal(document.getElementById('undoConfirmModal'));
-          modal.show();
-          
-        } catch (error) {
-          console.error('显示撤回确认对话框失败:', error);
-          showAlert('获取撤回信息失败：' + error.message, 'danger');
-        }
-      }
-      
-      async performUndo() {
-        // 隐藏确认对话框
-        bootstrap.Modal.getInstance(document.getElementById('undoConfirmModal')).hide();
-        
-        // 显示进度对话框
-        const progressModal = new bootstrap.Modal(document.getElementById('undoProgressModal'));
-        progressModal.show();
-        
-        try {
-          const result = await window.electronAPI.undoLastRename();
-          
-          // 更新进度显示
-          document.getElementById('undo-progress-text').textContent = '撤回完成';
-          document.getElementById('undo-status').innerHTML = this.generateUndoResultHtml(result);
-          document.getElementById('close-undo-progress').style.display = 'block';
-          
-          // 更新撤回按钮状态
-          await this.updateUndoButtonState();
-          
-          // 如果当前有预览数据，刷新预览
-          if (selectedFiles.length > 0) {
-            previewManager.refreshPreview();
-          }
-          
-        } catch (error) {
-          console.error('撤回操作失败:', error);
-          document.getElementById('undo-progress-text').textContent = '撤回失败';
-          document.getElementById('undo-status').innerHTML = `
-            <div class="alert alert-danger">
-              <i class="bi bi-exclamation-triangle me-2"></i>
-              撤回操作失败：${error.message}
-            </div>
-          `;
-          document.getElementById('close-undo-progress').style.display = 'block';
-        }
-      }
-      
-      generateUndoResultHtml(result) {
-        let html = '';
-        
-        if (result.success) {
-          html += `
-            <div class="alert alert-success">
-              <i class="bi bi-check-circle me-2"></i>
-              撤回操作完成！成功恢复 ${result.successCount} 个文件的名称。
-            </div>
-          `;
-        } else {
-          html += `
-            <div class="alert alert-danger">
-              <i class="bi bi-exclamation-triangle me-2"></i>
-              撤回操作失败！
-            </div>
-          `;
-        }
-        
-        if (result.errorCount > 0) {
-          html += `
-            <div class="alert alert-warning">
-              <i class="bi bi-exclamation-triangle me-2"></i>
-              ${result.errorCount} 个文件撤回失败，请检查文件是否被占用或已被移动。
-            </div>
-          `;
-        }
-        
-        return html;
-      }
-    }
-// 事件监听器
-    document.getElementById('clear-fields').addEventListener('click', async () => {
-      // 清空所有输入字段
-      fieldNames.forEach(fieldName => {
-        document.getElementById(fieldName).value = '';
-      });
-      showAlert('已清空所有字段', 'info');
-      
-      // 刷新预览
-      await previewManager.refreshPreview();
-    });
-    
-    document.getElementById('rename-files').addEventListener('click', async () => {
-      if (!selectedFiles || selectedFiles.length === 0) {
-        showAlert('请先选择文件！', 'danger');
-        return;
-      }
-      
-      const product = document.getElementById('product').value.trim();
-      const template = document.getElementById('template').value.trim();
-      const video = document.getElementById('video').value.trim();
-      const author = document.getElementById('author').value.trim();
-      const duration = document.getElementById('duration').value.trim();
-      const language = document.getElementById('language').value.trim();
-      
-      if (!product || !template || !video || !author || !duration) {
-        showAlert('请填写所有必填字段！', 'danger');
-        return;
-      }
-      
-      // 验证制作时长是否为有效数字
-      if (isNaN(parseFloat(duration)) || parseFloat(duration) <= 0) {
-        showAlert('制作时长必须是大于0的数字！', 'danger');
-        return;
-      }
-      
-      // 保存到历史记录
-      addToHistory('product', product);
-      addToHistory('template', template);
-      addToHistory('video', video);
-      addToHistory('author', author);
-      addToHistory('duration', duration);
-      if (language) {
-        addToHistory('language', language);
-      }
-      
-      const fields = { product, template, video, author, duration, language };
-      const options = { useNumberSuffix: true }; // 始终启用数字后缀序号
-      
-      console.log('=== 开始重命名操作 ===');
-      console.log('调用 renameFiles API，文件数量:', selectedFiles.length);
-      
-      const result = await window.electronAPI.renameFiles({ files: selectedFiles, fields, options });
-      
-      console.log('重命名操作完成，结果:', result);
-      
-      // 显示重命名结果
-      let html = '';
-      result.forEach(r => {
-        if (r.success) {
-          const suffixInfo = r.videoSuffix ? `（视频名添加后缀：${r.videoSuffix}）` : '（无后缀）';
-          html += `
-            <tr class="table-success">
-              <td class="preview-filename">${r.oldPath.split(/[/\\]/).pop()}</td>
-              <td class="preview-filename">${r.newPath.split(/[/\\]/).pop()}</td>
-            </tr>
-          `;
-        } else {
-          html += `
-            <tr class="table-danger">
-              <td class="preview-filename">${r.oldPath.split(/[/\\]/).pop()}</td>
-              <td class="preview-filename text-danger">重命名失败</td>
-            </tr>
-          `;
-        }
-      });
-      
-      // 更新预览表格显示结果
-      previewManager.previewTableBody.innerHTML = html;
-      
-      // 显示成功消息
-      const successCount = result.filter(r => r.success).length;
-      const failCount = result.filter(r => !r.success).length;
-      if (successCount > 0) {
-        showAlert(`重命名完成：${successCount} 个文件成功${failCount > 0 ? `，${failCount} 个文件失败` : ''}`,
-                  failCount > 0 ? 'warning' : 'success');
-        
-        // 修复：重命名成功后更新撤回按钮状态
-        console.log('重命名成功，更新撤回按钮状态');
-        if (undoManager) {
-          await undoManager.updateUndoButtonState();
-          console.log('撤回按钮状态已更新');
-        }
-      } else {
-        showAlert('重命名失败，请检查文件权限或路径', 'danger');
-      }
-      
-      // 清空选择的文件
-      selectedFiles = [];
-      previewData = [];
-    });
-
-    function showAlert(message, type) {
-      // 创建Toast容器（如果不存在）
-      let toastContainer = document.getElementById('toast-container');
-      if (!toastContainer) {
-        toastContainer = document.createElement('div');
-        toastContainer.id = 'toast-container';
-        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-        toastContainer.style.zIndex = '9999';
-        document.body.appendChild(toastContainer);
-      }
-      
-      // 创建Toast元素
-      const toastId = 'toast-' + Date.now();
-      const toastDiv = document.createElement('div');
-      toastDiv.id = toastId;
-      toastDiv.className = 'toast align-items-center border-0';
-      toastDiv.role = 'alert';
-      toastDiv.setAttribute('aria-live', 'assertive');
-      toastDiv.setAttribute('aria-atomic', 'true');
-      
-      // 根据类型设置样式
-      let bgClass = '';
-      let iconClass = '';
-      switch (type) {
-        case 'success':
-          bgClass = 'text-bg-success';
-          iconClass = 'bi-check-circle-fill';
-          break;
-        case 'danger':
-          bgClass = 'text-bg-danger';
-          iconClass = 'bi-exclamation-triangle-fill';
-          break;
-        case 'warning':
-          bgClass = 'text-bg-warning';
-          iconClass = 'bi-exclamation-triangle-fill';
-          break;
-        case 'info':
-          bgClass = 'text-bg-info';
-          iconClass = 'bi-info-circle-fill';
-          break;
-        default:
-          bgClass = 'text-bg-primary';
-          iconClass = 'bi-info-circle-fill';
-      }
-      
-      toastDiv.classList.add(bgClass);
-      
-      toastDiv.innerHTML = `
-        <div class="d-flex">
-          <div class="toast-body d-flex align-items-center">
-            <i class="bi ${iconClass} me-2"></i>
-            ${message}
-          </div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-      `;
-      
-      // 添加到容器
-      toastContainer.appendChild(toastDiv);
-      
-      // 初始化并显示Toast
-      const toast = new bootstrap.Toast(toastDiv, {
-        autohide: true,
-        delay: 3000
-      });
-      
-      toast.show();
-      
-      // Toast隐藏后移除元素
-      toastDiv.addEventListener('hidden.bs.toast', () => {
-        toastDiv.remove();
-      });
-    }
-    
-    // 添加表单字段变更监听器
-    function setupFormFieldListeners() {
-      // 防抖函数，避免频繁更新
-      let debounceTimer;
-      const debounceDelay = 500; // 500ms延迟
-      
-      function debouncedRefresh() {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          previewManager.refreshPreview();
-        }, debounceDelay);
-      }
-      
-      // 为所有表单字段添加监听器
-      fieldNames.forEach(fieldName => {
-        const field = document.getElementById(fieldName);
-        field.addEventListener('input', debouncedRefresh);
-        field.addEventListener('change', debouncedRefresh);
-      });
-    }
-    
-    // 添加新的事件监听器
-    function setupNewEventListeners() {
-      // 字段验证事件
-      const allFieldNames = ['product', 'template', 'video', 'author', 'duration', 'language'];
-      allFieldNames.forEach(fieldName => {
-        const field = document.getElementById(fieldName);
-        
-        // 实时验证
-        field.addEventListener('input', (e) => {
-          FieldValidator.validateField(fieldName, e.target.value);
-        });
-        
-        field.addEventListener('blur', (e) => {
-          FieldValidator.validateField(fieldName, e.target.value);
-        });
-      });
-    }
-    
-    // 全局变量
-    let undoManager;
-    
-    // 页面加载完成后初始化
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('=== DOM 内容加载完成，开始初始化 ===');
-      
-      initializeDropdowns();
-      setupDragAndDrop();
-      setupFormFieldListeners();
-      setupNewEventListeners();
-      progressManager.init();
-      
-      // 初始化撤回管理器
-      console.log('准备初始化撤回管理器...');
-      undoManager = new UndoManager();
-      console.log('撤回管理器初始化完成');
-      
-      // 初始化工具提示
-      const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
-      tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-      });
-      
-      console.log('UI界面重构完成：紧凑布局，拖拽区域可点击选择文件');
-    });
-  </script>
+  <!-- Bootstrap JavaScript -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+  
+  <!-- 模块化JavaScript文件 -->
+  <script src="utils.js"></script>
+  <script src="history.js"></script>
+  <script src="ui.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

@@ -160,8 +160,12 @@ ipcMain.handle('get-file-metadata', async (event, data) => {
       // 使用新的语言优先级逻辑：用户输入 > 文件名识别 > 默认值
       const finalLanguage = determineFinalLanguage(fields.language, filePath);
       
-      // 生成预览文件名（不带后缀）
-      const previewName = buildName(fields, ext, ratio, finalLanguage, videoDuration, '');
+      // 生成预览文件名（带序号）- 第一个文件不加序号，后续文件使用普通数字
+      let videoSuffix = '';
+      if (i > 0) {
+        videoSuffix = String(i + 1); // 第二个文件用2，第三个文件用3，以此类推
+      }
+      const previewName = buildName(fields, ext, ratio, finalLanguage, videoDuration, videoSuffix);
       
       results.push({
         originalPath: filePath,
@@ -172,6 +176,7 @@ ipcMain.handle('get-file-metadata', async (event, data) => {
         ratio,
         videoDuration,
         languageCode: finalLanguage,
+        videoSuffix: videoSuffix,
         success: true
       });
       
@@ -229,11 +234,15 @@ ipcMain.handle('detect-filename-conflicts', async (event, data) => {
       // 获取视频时长
       const videoDuration = await getVideoDuration(filePath) || "unknown";
       
-      // 从文件名中提取语言代码
-      const languageCode = extractLanguageCode(filePath) || "unknown";
+      // 使用新的语言优先级逻辑：用户输入 > 文件名识别 > 默认值
+      const finalLanguage = determineFinalLanguage(fields.language, filePath);
       
-      // 生成预览文件名（不带后缀）
-      const previewName = buildName(fields, ext, ratio, languageCode, videoDuration, '');
+      // 生成预览文件名（带序号）- 第一个文件不加序号，后续文件使用普通数字
+      let videoSuffix = '';
+      if (i > 0) {
+        videoSuffix = String(i + 1); // 第二个文件用2，第三个文件用3，以此类推
+      }
+      const previewName = buildName(fields, ext, ratio, finalLanguage, videoDuration, videoSuffix);
       
       if (!nameMap.has(previewName)) {
         nameMap.set(previewName, []);

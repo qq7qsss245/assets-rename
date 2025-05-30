@@ -73,8 +73,8 @@ function extractVideoName(filename) {
  */
 function buildName(fields, ext, ratio, language, videoDuration, videoSuffix = '') {
   // S-比例、L-语言为占位符，VL-L为视频时长（秒），M为制作时长（小时）
-  // videoSuffix 用于在视频名后添加数字后缀
-  const videoName = `${fields.video}${videoSuffix}`;
+  // videoSuffix 用于在视频名后添加数字后缀，直接附加到视频名后面，不加下划线
+  const videoName = videoSuffix ? `${fields.video}${videoSuffix}` : fields.video;
   return `${getTodayStr()}_P-${fields.product}_T-${fields.template}_C-${videoName}_S-${ratio}_L-${language}_VL-L-${videoDuration}_D-${fields.author}_M-${fields.duration}${ext}`;
 }
 
@@ -99,37 +99,41 @@ function determineFinalLanguage(userLanguage, filePath) {
 }
 
 /**
- * 获取一个唯一的视频名称，避免重复
+ * 获取带序号的视频名称
  * @param {string} dir - 目录路径
  * @param {Object} fields - 用户填写的字段
  * @param {string} ext - 文件扩展名
  * @param {string} ratio - 比例
  * @param {string} language - 语言代码
  * @param {string|number} videoDuration - 视频时长（秒）
+ * @param {number} fileIndex - 文件索引（从0开始）
  * @param {boolean} useNumberSuffix - 是否使用数字后缀
  * @returns {Object} 包含生成的名称和使用的后缀
  */
-function getUniqueVideoName(dir, fields, ext, ratio, language, videoDuration, useNumberSuffix = true) {
-  // 先尝试不带后缀的原始名称
+function getUniqueVideoName(dir, fields, ext, ratio, language, videoDuration, fileIndex = 0, useNumberSuffix = true) {
+  // 第一个文件（index=0）不添加序号，后续文件添加普通数字序号
   let videoSuffix = '';
-  let baseName = buildName(fields, '', ratio, language, videoDuration, videoSuffix);
-  let fullName = `${baseName}${ext}`;
-  
-  if (!fs.existsSync(path.join(dir, fullName))) {
-    return { name: fullName, videoSuffix: '' };
+  if (fileIndex > 0) {
+    videoSuffix = String(fileIndex + 1); // 第二个文件用2，第三个文件用3，以此类推
   }
   
-  // 始终使用数字后缀格式，在视频名后添加数字
-  let counter = 2; // 从2开始，因为第一个不加后缀
+  const baseName = buildName(fields, '', ratio, language, videoDuration, videoSuffix);
+  const fullName = `${baseName}${ext}`;
   
-  while (fs.existsSync(path.join(dir, fullName))) {
-    videoSuffix = counter.toString();
-    baseName = buildName(fields, '', ratio, language, videoDuration, videoSuffix);
-    fullName = `${baseName}${ext}`;
+  // 如果文件已存在，继续递增序号直到找到可用的名称
+  let counter = fileIndex;
+  let currentSuffix = videoSuffix;
+  let currentName = fullName;
+  
+  while (fs.existsSync(path.join(dir, currentName))) {
     counter++;
+    // 如果是第一个文件且存在冲突，从2开始编号
+    currentSuffix = counter === 0 ? '2' : String(counter + 1);
+    const currentBaseName = buildName(fields, '', ratio, language, videoDuration, currentSuffix);
+    currentName = `${currentBaseName}${ext}`;
   }
   
-  return { name: fullName, videoSuffix };
+  return { name: currentName, videoSuffix: currentSuffix };
 }
 
 function getVideoSize(filePath) {
@@ -200,8 +204,8 @@ async function renameFiles(filePaths, fields, options = {}) {
     // 使用新的语言优先级逻辑：用户输入 > 文件名识别 > 默认值
     const finalLanguage = determineFinalLanguage(fields.language, oldPath);
     
-    // 获取唯一的文件名，处理重名情况
-    const { name: newName, videoSuffix } = getUniqueVideoName(dir, fields, ext, ratio, finalLanguage, videoDuration, useNumberSuffix);
+    // 获取带序号的文件名，传递文件索引
+    const { name: newName, videoSuffix } = getUniqueVideoName(dir, fields, ext, ratio, finalLanguage, videoDuration, i, useNumberSuffix);
     const newPath = path.join(dir, newName);
     
     try {
