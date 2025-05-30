@@ -3,9 +3,9 @@
  * 负责处理用户界面交互、拖拽、进度显示等功能
  */
 
-// 全局变量
-let selectedFiles = [];
-let previewData = [];
+// 全局变量 - 直接使用 window 对象避免作用域问题
+window.selectedFiles = window.selectedFiles || [];
+window.previewData = window.previewData || [];
 
 /**
  * 预览管理器类
@@ -25,8 +25,8 @@ class PreviewManager {
   showDropZone() {
     this.dropZone.classList.remove('d-none');
     this.previewTable.classList.add('d-none');
-    selectedFiles = [];
-    previewData = [];
+    window.selectedFiles = [];
+    window.previewData = [];
   }
   
   /**
@@ -47,7 +47,7 @@ class PreviewManager {
       return;
     }
     
-    selectedFiles = files;
+    window.selectedFiles = files;
     this.showPreviewTable();
     
     // 显示加载状态
@@ -59,7 +59,7 @@ class PreviewManager {
     // 获取文件元数据和预览名称
     try {
       const metadata = await window.electronAPI.getFileMetadata({ filePaths: files, fields });
-      previewData = metadata;
+      window.previewData = metadata;
       this.renderPreviewTable(metadata);
     } catch (error) {
       console.error('获取文件元数据失败:', error);
@@ -162,22 +162,22 @@ class PreviewManager {
    * 实时更新预览（当表单字段变更时）
    */
   async refreshPreview() {
-    if (selectedFiles.length === 0) return;
+    if (window.selectedFiles.length === 0) return;
     
     // 显示加载状态
-    this.showLoadingState(selectedFiles);
+    this.showLoadingState(window.selectedFiles);
     
     // 获取表单字段
     const fields = this.getFormFields();
     
     // 重新获取预览数据
     try {
-      const metadata = await window.electronAPI.getFileMetadata({ filePaths: selectedFiles, fields });
+      const metadata = await window.electronAPI.getFileMetadata({ filePaths: window.selectedFiles, fields });
       previewData = metadata;
       this.renderPreviewTable(metadata);
     } catch (error) {
       console.error('刷新预览失败:', error);
-      this.showErrorState(selectedFiles, error.message);
+      this.showErrorState(window.selectedFiles, error.message);
     }
   }
 }
@@ -601,7 +601,7 @@ function setupDragAndDrop() {
     console.log('点击选择文件数量:', files ? files.length : 0);
     
     if (files && files.length > 0) {
-      selectedFiles = files;
+      window.selectedFiles = files;
       updateFileListDisplay(files);
       
       // 自动填入视频名
@@ -669,7 +669,7 @@ function setupDragAndDrop() {
       const { validFiles, invalidFiles } = await window.electronAPI.validateVideoFiles(filePaths);
       
       if (validFiles.length > 0) {
-        selectedFiles = validFiles;
+        window.selectedFiles = validFiles;
         updateFileListDisplay(validFiles);
         
         // 自动填入视频名
@@ -744,13 +744,7 @@ function setupNewEventListeners() {
   });
 }
 
-// 导出全局变量和函数供其他模块使用
-window.selectedFiles = selectedFiles;
-window.previewData = previewData;
-window.updateFileListDisplay = updateFileListDisplay;
-// 导出全局变量和函数供其他模块使用
-window.selectedFiles = selectedFiles;
-window.previewData = previewData;
+// 导出函数供其他模块使用
 window.updateFileListDisplay = updateFileListDisplay;
 
 // 创建全局实例变量

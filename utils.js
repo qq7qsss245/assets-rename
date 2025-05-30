@@ -41,7 +41,16 @@ function autoFillVideoName(files) {
     console.log('提取的视频名:', extractedName);
     if (extractedName) {
       videoField.value = extractedName;
+      
+      // 🔧 修复：手动触发事件以更新验证状态和预览
+      console.log('触发input和change事件以更新验证状态...');
+      const inputEvent = new Event('input', { bubbles: true });
+      const changeEvent = new Event('change', { bubbles: true });
+      videoField.dispatchEvent(inputEvent);
+      videoField.dispatchEvent(changeEvent);
+      
       console.log('自动填入视频名成功:', extractedName);
+      console.log('验证状态和预览已更新');
     } else {
       console.log('提取的视频名为空，未填入');
     }
@@ -242,7 +251,7 @@ class FieldValidator {
     // 验证必填字段
     requiredFields.forEach(fieldName => {
       const value = document.getElementById(fieldName).value;
-      const result = this.validateField(fieldName, value);
+      const result = FieldValidator.validateField(fieldName, value);
       if (!result.isValid) {
         allValid = false;
         errors.push(`${fieldName}: ${result.message}`);
@@ -253,7 +262,7 @@ class FieldValidator {
     optionalFields.forEach(fieldName => {
       const value = document.getElementById(fieldName).value;
       if (value && value.trim().length > 0) {
-        const result = this.validateField(fieldName, value);
+        const result = FieldValidator.validateField(fieldName, value);
         if (!result.isValid) {
           allValid = false;
           errors.push(`${fieldName}: ${result.message}`);
