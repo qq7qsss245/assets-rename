@@ -2,7 +2,7 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { selectFiles } = require('./fileSelector');
-const { renameFiles, undoLastRename, getUndoStatus, clearUndoData, getVideoSize, getVideoDuration, extractLanguageCode, extractVideoName, getNearestRatio, buildName, getTodayStr, determineFinalLanguage } = require('./fileRenamer');
+const { renameFiles, undoLastRename, getUndoStatus, clearUndoData, getVideoSize, getVideoDuration, extractLanguageCode, extractVideoName, getNearestRatio, buildName, getTodayStr, determineFinalLanguage, calculateRatioGroupIndexes } = require('./fileRenamer');
 const ffmpeg = require('fluent-ffmpeg');
 const ffprobeStatic = require('ffprobe-static');
 
@@ -145,6 +145,9 @@ ipcMain.handle('get-file-metadata', async (event, data) => {
   console.log('=== 获取文件元数据 ===');
   console.log('文件数量:', filePaths.length);
   
+  // 计算每个文件在其比例组内的序号
+  const ratioGroupIndexes = await calculateRatioGroupIndexes(filePaths);
+  
   for (let i = 0; i < filePaths.length; i++) {
     const filePath = filePaths[i];
     const ext = path.extname(filePath);
@@ -160,10 +163,13 @@ ipcMain.handle('get-file-metadata', async (event, data) => {
       // 使用新的语言优先级逻辑：用户输入 > 文件名识别 > 默认值
       const finalLanguage = determineFinalLanguage(fields.language, filePath);
       
-      // 生成预览文件名（带序号）- 第一个文件不加序号，后续文件使用普通数字
+      // 获取该文件在其比例组内的序号
+      const ratioGroupIndex = ratioGroupIndexes.get(i);
+      
+      // 生成预览文件名（按比例分组的序号）- 每个比例组内第一个文件不加序号，后续文件使用普通数字
       let videoSuffix = '';
-      if (i > 0) {
-        videoSuffix = String(i + 1); // 第二个文件用2，第三个文件用3，以此类推
+      if (ratioGroupIndex > 0) {
+        videoSuffix = String(ratioGroupIndex + 1); // 第二个文件用2，第三个文件用3，以此类推
       }
       const previewName = buildName(fields, ext, ratio, finalLanguage, videoDuration, videoSuffix);
       
@@ -177,10 +183,11 @@ ipcMain.handle('get-file-metadata', async (event, data) => {
         videoDuration,
         languageCode: finalLanguage,
         videoSuffix: videoSuffix,
+        ratioGroupIndex: ratioGroupIndex,
         success: true
       });
       
-      console.log(`文件 ${i + 1}: ${path.basename(filePath)} -> 元数据获取成功`);
+      console.log(`文件 ${i + 1}: ${path.basename(filePath)} -> 元数据获取成功 (比例:${ratio}, 组内序号:${ratioGroupIndex})`);
     } catch (error) {
       console.error(`文件 ${i + 1}: ${path.basename(filePath)} -> 元数据获取失败:`, error);
       results.push({
@@ -223,6 +230,9 @@ ipcMain.handle('detect-filename-conflicts', async (event, data) => {
   const nameMap = new Map();
   
   try {
+    // 计算每个文件在其比例组内的序号
+    const ratioGroupIndexes = await calculateRatioGroupIndexes(filePaths);
+    
     for (let i = 0; i < filePaths.length; i++) {
       const filePath = filePaths[i];
       const ext = path.extname(filePath);
@@ -237,10 +247,13 @@ ipcMain.handle('detect-filename-conflicts', async (event, data) => {
       // 使用新的语言优先级逻辑：用户输入 > 文件名识别 > 默认值
       const finalLanguage = determineFinalLanguage(fields.language, filePath);
       
-      // 生成预览文件名（带序号）- 第一个文件不加序号，后续文件使用普通数字
+      // 获取该文件在其比例组内的序号
+      const ratioGroupIndex = ratioGroupIndexes.get(i);
+      
+      // 生成预览文件名（按比例分组的序号）- 每个比例组内第一个文件不加序号，后续文件使用普通数字
       let videoSuffix = '';
-      if (i > 0) {
-        videoSuffix = String(i + 1); // 第二个文件用2，第三个文件用3，以此类推
+      if (ratioGroupIndex > 0) {
+        videoSuffix = String(ratioGroupIndex + 1); // 第二个文件用2，第三个文件用3，以此类推
       }
       const previewName = buildName(fields, ext, ratio, finalLanguage, videoDuration, videoSuffix);
       
@@ -251,7 +264,9 @@ ipcMain.handle('detect-filename-conflicts', async (event, data) => {
         index: i,
         originalPath: filePath,
         originalName: path.basename(filePath),
-        previewName
+        previewName,
+        ratio,
+        ratioGroupIndex
       });
     }
     

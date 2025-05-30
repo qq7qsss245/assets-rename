@@ -189,6 +189,10 @@ async function renameFiles(filePaths, fields, options = {}) {
   const results = [];
   const successfulRenames = []; // 存储成功的重命名操作，用于撤回
   
+  // 计算每个文件在其比例组内的序号
+  const ratioGroupIndexes = await calculateRatioGroupIndexes(filePaths);
+  
+  // 按原始顺序处理文件，使用比例组内的序号
   for (let i = 0; i < filePaths.length; i++) {
     const oldPath = filePaths[i];
     const dir = path.dirname(oldPath);
@@ -204,17 +208,20 @@ async function renameFiles(filePaths, fields, options = {}) {
     // 使用新的语言优先级逻辑：用户输入 > 文件名识别 > 默认值
     const finalLanguage = determineFinalLanguage(fields.language, oldPath);
     
-    // 获取带序号的文件名，传递文件索引
-    const { name: newName, videoSuffix } = getUniqueVideoName(dir, fields, ext, ratio, finalLanguage, videoDuration, i, useNumberSuffix);
+    // 获取该文件在其比例组内的序号
+    const ratioGroupIndex = ratioGroupIndexes.get(i);
+    
+    // 获取带序号的文件名，传递比例组内的索引
+    const { name: newName, videoSuffix } = getUniqueVideoName(dir, fields, ext, ratio, finalLanguage, videoDuration, ratioGroupIndex, useNumberSuffix);
     const newPath = path.join(dir, newName);
     
     try {
       await fs.promises.rename(oldPath, newPath);
-      results.push({ oldPath, newPath, success: true, videoSuffix });
+      results.push({ oldPath, newPath, success: true, videoSuffix, ratio, ratioGroupIndex });
       // 保存成功的重命名操作用于撤回
       successfulRenames.push({ oldPath, newPath });
     } catch (err) {
-      results.push({ oldPath, newPath, success: false, error: err.message, videoSuffix });
+      results.push({ oldPath, newPath, success: false, error: err.message, videoSuffix, ratio, ratioGroupIndex });
     }
   }
   
@@ -390,6 +397,44 @@ function clearUndoData() {
   lastRenameOperation = null;
 }
 
+/**
+ * 按视频比例分组并计算每个文件在其比例组内的序号
+ * @param {Array<string>} filePaths - 文件路径数组
+ * @returns {Promise<Map<number, number>>} 文件索引到比例组内序号的映射
+ */
+async function calculateRatioGroupIndexes(filePaths) {
+  // 第一步：获取所有文件的比例信息，按比例分组
+  const filesByRatio = new Map();
+  
+  for (let i = 0; i < filePaths.length; i++) {
+    const filePath = filePaths[i];
+    
+    // 检测视频尺寸
+    const { width, height } = await getVideoSize(filePath);
+    const ratio = getNearestRatio(width, height);
+    
+    if (!filesByRatio.has(ratio)) {
+      filesByRatio.set(ratio, []);
+    }
+    
+    filesByRatio.get(ratio).push({
+      originalIndex: i,
+      filePath: filePath
+    });
+  }
+  
+  // 第二步：为每个比例组分配序号
+  const fileIndexMap = new Map(); // 存储每个文件的比例组内序号
+  
+  filesByRatio.forEach((files, ratio) => {
+    files.forEach((fileInfo, indexInGroup) => {
+      fileIndexMap.set(fileInfo.originalIndex, indexInGroup);
+    });
+  });
+  
+  return fileIndexMap;
+}
+
 module.exports = {
   renameFiles,
   undoLastRename,
@@ -402,5 +447,6 @@ module.exports = {
   getNearestRatio,
   buildName,
   getTodayStr,
-  determineFinalLanguage
+  determineFinalLanguage,
+  calculateRatioGroupIndexes
 };
