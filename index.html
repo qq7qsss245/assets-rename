@@ -306,8 +306,14 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
-          <button type="button" class="btn btn-warning" id="confirm-undo-btn" disabled>确认撤回</button>
+          <div class="undo-modal-buttons">
+            <button type="button" class="btn btn-undo-cancel" data-bs-dismiss="modal">
+              <i class="bi bi-x-circle"></i>取消
+            </button>
+            <button type="button" class="btn btn-undo-confirm" id="confirm-undo-btn" disabled>
+              <i class="bi bi-arrow-counterclockwise"></i>确认撤回
+            </button>
+          </div>
         </div>
       </div>
     </div>

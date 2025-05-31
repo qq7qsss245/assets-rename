@@ -39,6 +39,9 @@ async function initializeApp() {
     window.progressManager.init();
     window.undoManager = new UndoManager();
     
+    // 设置previewManager引用，指向fileManager（因为FileManager包含预览功能）
+    window.previewManager = window.fileManager;
+    
     // 设置主要事件监听器
     setupMainEventListeners();
     
@@ -243,7 +246,11 @@ async function handleRenameResult(result) {
   });
   
   // 更新预览表格显示结果
-  window.previewManager.previewTableBody.innerHTML = html;
+  if (window.previewManager && window.previewManager.previewTableBody) {
+    window.previewManager.previewTableBody.innerHTML = html;
+  } else {
+    console.warn('previewManager 或 previewTableBody 不存在，跳过预览表格更新');
+  }
   
   // 显示成功消息
   const successCount = result.filter(r => r.success).length;

@@ -317,6 +317,11 @@ class UndoManager {
   
   async showUndoConfirmDialog() {
     try {
+      // 诊断日志：检查Bootstrap可用性
+      console.log('=== 撤回弹窗诊断开始 ===');
+      console.log('Bootstrap可用:', typeof bootstrap !== 'undefined');
+      console.log('Bootstrap.Modal可用:', typeof bootstrap !== 'undefined' && !!bootstrap.Modal);
+      
       const status = await window.electronAPI.getUndoStatus();
       
       if (!status.canUndo) {
@@ -343,12 +348,34 @@ class UndoManager {
       document.getElementById('confirm-undo-checkbox').checked = false;
       document.getElementById('confirm-undo-btn').disabled = true;
       
+      // 诊断日志：检查弹窗元素
+      const modalElement = document.getElementById('undoConfirmModal');
+      console.log('弹窗元素存在:', !!modalElement);
+      console.log('弹窗元素类名:', modalElement ? modalElement.className : 'N/A');
+      
+      // 检查Bootstrap CSS是否加载
+      const computedStyle = window.getComputedStyle(modalElement);
+      console.log('弹窗display样式:', computedStyle.display);
+      console.log('弹窗position样式:', computedStyle.position);
+      
       // 显示确认对话框
-      const modal = new bootstrap.Modal(document.getElementById('undoConfirmModal'));
+      const modal = new bootstrap.Modal(modalElement);
+      console.log('Modal实例创建成功:', !!modal);
+      
       modal.show();
+      console.log('Modal.show()调用完成');
+      
+      // 检查弹窗显示后的状态
+      setTimeout(() => {
+        const afterStyle = window.getComputedStyle(modalElement);
+        console.log('显示后display样式:', afterStyle.display);
+        console.log('显示后z-index样式:', afterStyle.zIndex);
+        console.log('=== 撤回弹窗诊断结束 ===');
+      }, 100);
       
     } catch (error) {
       console.error('显示撤回确认对话框失败:', error);
+      console.error('错误堆栈:', error.stack);
       showAlert('获取撤回信息失败：' + error.message, 'danger');
     }
   }
@@ -361,9 +388,31 @@ class UndoManager {
         confirmModal.hide();
       }
       
+      // 诊断日志：检查撤回进度弹窗
+      console.log('=== 撤回进度弹窗诊断开始 ===');
+      const progressModalElement = document.getElementById('undoProgressModal');
+      console.log('进度弹窗元素存在:', !!progressModalElement);
+      console.log('进度弹窗元素类名:', progressModalElement ? progressModalElement.className : 'N/A');
+      
+      // 检查进度弹窗的样式
+      const progressComputedStyle = window.getComputedStyle(progressModalElement);
+      console.log('进度弹窗display样式:', progressComputedStyle.display);
+      console.log('进度弹窗position样式:', progressComputedStyle.position);
+      
       // 显示进度对话框
-      const progressModal = new bootstrap.Modal(document.getElementById('undoProgressModal'));
+      const progressModal = new bootstrap.Modal(progressModalElement);
+      console.log('进度Modal实例创建成功:', !!progressModal);
+      
       progressModal.show();
+      console.log('进度Modal.show()调用完成');
+      
+      // 检查进度弹窗显示后的状态
+      setTimeout(() => {
+        const afterProgressStyle = window.getComputedStyle(progressModalElement);
+        console.log('进度弹窗显示后display样式:', afterProgressStyle.display);
+        console.log('进度弹窗显示后z-index样式:', afterProgressStyle.zIndex);
+        console.log('=== 撤回进度弹窗诊断结束 ===');
+      }, 100);
     
       const result = await window.electronAPI.undoLastRename();
       
@@ -377,6 +426,7 @@ class UndoManager {
       
     } catch (error) {
       console.error('撤回操作失败:', error);
+      console.error('错误堆栈:', error.stack);
       document.getElementById('undo-status').innerHTML = `
         <div class="text-danger">
           <i class="bi bi-exclamation-triangle me-2"></i>撤回操作失败：${error.message}
