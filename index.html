@@ -7,6 +7,8 @@
   <title>批量重命名工具</title>
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUa6c4+JgvxXKp0veJGFjkr6l0IUbvdUPOKfIxhp+z9+nGenB4W7CvhvLaRV" crossorigin="anonymous">
+  <!-- 备用Bootstrap CDN -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha512-t4GWSVZO1eC8BM339Xd7Uphw5s17a86tIZIj8qRxhnKub6WoyhnrxeCIMeAqBPgdZGlCcG2PrZjMc+Wr78+5Xg==" crossorigin="anonymous" referrerpolicy="no-referrer">
   <!-- Bootstrap Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
   <!-- 自定义样式 -->
@@ -17,77 +19,93 @@
     <div class="main-container">
       <!-- 重命名参数区域 -->
       <div class="params-section">
-        <div class="params-grid">
-          <div class="param-group">
-            <label for="product">产品名 <span class="text-danger">*</span></label>
-            <div class="input-group">
-              <input type="text" class="form-control" id="product" placeholder="请输入产品名">
-              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="product" aria-expanded="false">
-                <i class="bi bi-clock-history"></i>
-              </button>
-              <ul class="dropdown-menu" id="product-dropdown"></ul>
+        <!-- 第一行：产品名、模板名、视频名 -->
+        <div class="row mb-2">
+          <div class="col-md-4">
+            <div class="param-group">
+              <label for="product">产品名 <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="product" placeholder="请输入产品名">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="product" aria-expanded="false">
+                  <i class="bi bi-clock-history"></i>
+                </button>
+                <ul class="dropdown-menu" id="product-dropdown"></ul>
+              </div>
+              <div class="form-text">用于标识产品类型</div>
             </div>
-            <div class="form-text">用于标识产品类型</div>
           </div>
           
-          <div class="param-group">
-            <label for="template">模板名 <span class="text-danger">*</span></label>
-            <div class="input-group">
-              <input type="text" class="form-control" id="template" placeholder="请输入模板名">
-              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="template" aria-expanded="false">
-                <i class="bi bi-clock-history"></i>
-              </button>
-              <ul class="dropdown-menu" id="template-dropdown"></ul>
+          <div class="col-md-4">
+            <div class="param-group">
+              <label for="template">模板名 <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="template" placeholder="请输入模板名">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="template" aria-expanded="false">
+                  <i class="bi bi-clock-history"></i>
+                </button>
+                <ul class="dropdown-menu" id="template-dropdown"></ul>
+              </div>
+              <div class="form-text">用于标识模板类型</div>
             </div>
-            <div class="form-text">用于标识模板类型</div>
           </div>
           
-          <div class="param-group">
-            <label for="video">视频名 <span class="text-danger">*</span></label>
-            <div class="input-group">
-              <input type="text" class="form-control" id="video" placeholder="请输入视频名">
-              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="video" aria-expanded="false">
-                <i class="bi bi-clock-history"></i>
-              </button>
-              <ul class="dropdown-menu" id="video-dropdown"></ul>
+          <div class="col-md-4">
+            <div class="param-group">
+              <label for="video">视频名 <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="video" placeholder="请输入视频名">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="video" aria-expanded="false">
+                  <i class="bi bi-clock-history"></i>
+                </button>
+                <ul class="dropdown-menu" id="video-dropdown"></ul>
+              </div>
+              <div class="form-text">用于标识视频内容</div>
             </div>
-            <div class="form-text">用于标识视频内容</div>
+          </div>
+        </div>
+        
+        <!-- 第二行：制作人、制作时长、语言 -->
+        <div class="row">
+          <div class="col-md-4">
+            <div class="param-group">
+              <label for="author">制作人 <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="author" placeholder="请输入制作人">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="author" aria-expanded="false">
+                  <i class="bi bi-clock-history"></i>
+                </button>
+                <ul class="dropdown-menu" id="author-dropdown"></ul>
+              </div>
+              <div class="form-text">用于标识制作人员</div>
+            </div>
           </div>
           
-          <div class="param-group">
-            <label for="author">制作人 <span class="text-danger">*</span></label>
-            <div class="input-group">
-              <input type="text" class="form-control" id="author" placeholder="请输入制作人">
-              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="author" aria-expanded="false">
-                <i class="bi bi-clock-history"></i>
-              </button>
-              <ul class="dropdown-menu" id="author-dropdown"></ul>
+          <div class="col-md-4">
+            <div class="param-group">
+              <label for="duration">制作时长（小时） <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="number" class="form-control" id="duration" placeholder="1" min="0.1" step="0.1">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="duration" aria-expanded="false">
+                  <i class="bi bi-clock-history"></i>
+                </button>
+                <ul class="dropdown-menu" id="duration-dropdown"></ul>
+              </div>
+              <div class="form-text">制作耗时（小时）</div>
             </div>
-            <div class="form-text">用于标识制作人员</div>
           </div>
           
-          <div class="param-group">
-            <label for="duration">制作时长（小时） <span class="text-danger">*</span></label>
-            <div class="input-group">
-              <input type="number" class="form-control" id="duration" placeholder="1" min="0.1" step="0.1">
-              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="duration" aria-expanded="false">
-                <i class="bi bi-clock-history"></i>
-              </button>
-              <ul class="dropdown-menu" id="duration-dropdown"></ul>
+          <div class="col-md-4">
+            <div class="param-group">
+              <label for="language">语言（可选）</label>
+              <div class="input-group">
+                <input type="text" class="form-control" id="language" placeholder="如：zh、en">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="language" aria-expanded="false">
+                  <i class="bi bi-clock-history"></i>
+                </button>
+                <ul class="dropdown-menu" id="language-dropdown"></ul>
+              </div>
+              <div class="form-text">语言代码（可选）</div>
             </div>
-            <div class="form-text">制作耗时（小时）</div>
-          </div>
-          
-          <div class="param-group">
-            <label for="language">语言（可选）</label>
-            <div class="input-group">
-              <input type="text" class="form-control" id="language" placeholder="如：zh、en">
-              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-field="language" aria-expanded="false">
-                <i class="bi bi-clock-history"></i>
-              </button>
-              <ul class="dropdown-menu" id="language-dropdown"></ul>
-            </div>
-            <div class="form-text">语言代码（可选）</div>
           </div>
         </div>
       </div>
@@ -374,6 +392,8 @@
 
   <!-- Bootstrap JavaScript -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+  <!-- 备用Bootstrap JavaScript CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js" integrity="sha512-VK2zcvntEufaimc+efOYi622VN5ZacdnufnmX7zIhCPmjhKnOi9ZDMtg1/ug5l183f19gG1/cBstPO4D8N/Img==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   
   <!-- 模块化JavaScript文件 -->
   <script src="utils.js"></script>

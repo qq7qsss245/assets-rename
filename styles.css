@@ -1,3 +1,248 @@
+/* Bootstrap 核心样式备用 - 确保关键类正常工作 */
+/* Bootstrap 栅格系统 */
+.container-fluid {
+  width: 100%;
+  padding-right: 15px;
+  padding-left: 15px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-right: -15px;
+  margin-left: -15px;
+}
+
+.col-md-4 {
+  position: relative;
+  width: 100%;
+  padding-right: 15px;
+  padding-left: 15px;
+  flex: 0 0 33.333333%;
+  max-width: 33.333333%;
+}
+
+/* Bootstrap 间距工具类 */
+.mb-2 {
+  margin-bottom: 0.5rem !important;
+}
+
+.mb-3 {
+  margin-bottom: 1rem !important;
+}
+
+.me-1 {
+  margin-right: 0.25rem !important;
+}
+
+.me-2 {
+  margin-right: 0.5rem !important;
+}
+
+.ms-2 {
+  margin-left: 0.5rem !important;
+}
+
+/* Bootstrap 显示工具类 */
+.d-none {
+  display: none !important;
+}
+
+.d-flex {
+  display: flex !important;
+}
+
+.justify-content-between {
+  justify-content: space-between !important;
+}
+
+.align-items-center {
+  align-items: center !important;
+}
+
+.text-center {
+  text-align: center !important;
+}
+
+/* Bootstrap 按钮基础样式 */
+.btn {
+  display: inline-block;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #212529;
+  text-align: center;
+  text-decoration: none;
+  vertical-align: middle;
+  cursor: pointer;
+  user-select: none;
+  background-color: transparent;
+  border: 1px solid transparent;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  border-radius: 0.375rem;
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.btn-primary {
+  color: #fff;
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+.btn-success {
+  color: #fff;
+  background-color: #198754;
+  border-color: #198754;
+}
+
+.btn-warning {
+  color: #000;
+  background-color: #ffc107;
+  border-color: #ffc107;
+}
+
+.btn-outline-secondary {
+  color: #6c757d;
+  border-color: #6c757d;
+}
+
+.btn-outline-primary {
+  color: #0d6efd;
+  border-color: #0d6efd;
+}
+
+/* Bootstrap 表单样式 */
+.form-control {
+  display: block;
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #212529;
+  background-color: #fff;
+  background-image: none;
+  border: 1px solid #ced4da;
+  border-radius: 0.375rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.input-group {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  width: 100%;
+}
+
+.input-group .form-control {
+  position: relative;
+  flex: 1 1 auto;
+  width: 1%;
+  min-width: 0;
+}
+
+.input-group .btn {
+  position: relative;
+  z-index: 2;
+}
+
+/* Bootstrap 表格样式 */
+.table {
+  width: 100%;
+  margin-bottom: 1rem;
+  color: #212529;
+  vertical-align: top;
+  border-color: #dee2e6;
+}
+
+.table th,
+.table td {
+  padding: 0.5rem 0.5rem;
+  background-color: var(--bs-table-bg);
+  border-bottom-width: 1px;
+  box-shadow: inset 0 0 0 9999px var(--bs-table-accent-bg);
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > td,
+.table-striped > tbody > tr:nth-of-type(odd) > th {
+  --bs-table-accent-bg: rgba(0, 0, 0, 0.05);
+}
+
+.table-hover > tbody > tr:hover > td,
+.table-hover > tbody > tr:hover > th {
+  --bs-table-accent-bg: rgba(0, 0, 0, 0.075);
+}
+
+.table-dark {
+  --bs-table-bg: #212529;
+  --bs-table-striped-bg: #2c3034;
+  --bs-table-striped-color: #fff;
+  --bs-table-active-bg: #373b3e;
+  --bs-table-active-color: #fff;
+  --bs-table-hover-bg: #323539;
+  --bs-table-hover-color: #fff;
+  color: #fff;
+  border-color: #373b3e;
+}
+
+/* Bootstrap 模态框基础样式 */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1055;
+  display: none;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  outline: 0;
+}
+
+.modal-dialog {
+  position: relative;
+  width: auto;
+  margin: 0.5rem;
+  pointer-events: none;
+}
+
+.modal-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  pointer-events: auto;
+  background-color: #fff;
+  background-clip: padding-box;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 0.3rem;
+  outline: 0;
+}
+
+/* Bootstrap 响应式断点 */
+@media (max-width: 767.98px) {
+  .col-md-4 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 768px) {
+  .modal-dialog {
+    max-width: 500px;
+    margin: 1.75rem auto;
+  }
+}
+
+@media (min-width: 992px) {
+  .modal-lg {
+    max-width: 800px;
+  }
+}
+
 /* 全局样式 - 现代简约设计 */
 :root {
   --primary-color: #667eea;
@@ -25,11 +270,6 @@
   --border-radius-lg: 16px;
 }
 
-/* 确保 Bootstrap 的 d-none 类正确工作 */
-.d-none {
-  display: none !important;
-}
-
 body {
   padding: 16px;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
@@ -49,83 +289,237 @@ body {
   height: calc(100vh - 32px);
 }
 
-/* 重命名参数区域 - 紧凑设计 */
+/* 重命名参数区域 - 超紧凑设计 */
 .params-section {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: var(--border-radius);
-  padding: 20px;
+  padding: 12px 16px;
   box-shadow: var(--shadow-md);
   border: 1px solid rgba(255, 255, 255, 0.2);
   flex-shrink: 0;
 }
 
-.params-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
-  align-items: end;
+/* Bootstrap栅格布局支持 */
+.params-section .row {
+  margin-bottom: 8px;
 }
 
+.params-section .row:last-child {
+  margin-bottom: 0;
+}
+
+/* 字段列样式 */
+.params-section .col-md-4 {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+/* 响应式布局 */
+@media (max-width: 767px) {
+  .params-section {
+    padding: 10px 14px;
+  }
+  
+  .params-section .row {
+    margin-bottom: 6px;
+  }
+  
+  .params-section .col-md-4 {
+    margin-bottom: 6px;
+  }
+}
+
+@media (max-width: 575px) {
+  .params-section {
+    padding: 8px 12px;
+  }
+  
+  .param-group .form-control {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    height: 26px;
+  }
+  
+  .param-group .input-group {
+    height: 26px;
+  }
+  
+  .param-group .btn-outline-secondary {
+    height: 26px;
+    padding: 0 6px;
+    font-size: 0.7rem;
+  }
+  
+  .param-group label {
+    font-size: 0.7rem;
+  }
+  
+  .param-group .form-text {
+    font-size: 0.6rem;
+  }
+}
+
+/* 字段组样式 */
 .param-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  margin-bottom: 2px;
 }
 
 .param-group label {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--gray-700);
   margin-bottom: 0;
   letter-spacing: 0.025em;
+  line-height: 1.1;
 }
 
 .param-group .input-group {
-  height: 36px;
+  height: 28px;
   border-radius: var(--border-radius-sm);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
 }
 
 .param-group .form-control {
-  font-size: 0.8rem;
-  border: 2px solid var(--gray-200);
+  font-size: 0.7rem;
+  border: 1px solid var(--gray-200);
   border-radius: var(--border-radius-sm);
-  padding: 8px 12px;
+  padding: 4px 8px;
   transition: all 0.2s ease;
   background: white;
   color: var(--gray-700);
+  height: 28px;
 }
 
 .param-group .form-control:focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
   outline: none;
 }
 
-.param-group .btn-outline-secondary {
-  border: 2px solid var(--gray-200);
-  border-left: none;
-  background: var(--gray-50);
-  color: var(--gray-500);
-  transition: all 0.2s ease;
-}
-
-.param-group .btn-outline-secondary:hover {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
-  color: white;
-}
-
 .param-group .form-text {
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   color: var(--gray-500);
-  margin-top: 2px;
-  line-height: 1.3;
+  margin-top: 1px;
+  line-height: 1.1;
 }
 
 /* 预览区域 - 紧凑设计 */
+/* 历史记录下拉按钮 - 现代化设计 */
+.param-group .btn-outline-secondary {
+  border: 1px solid var(--gray-200);
+  border-left: none;
+  background: linear-gradient(135deg, var(--gray-50) 0%, white 100%);
+  color: var(--gray-500);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 28px;
+  padding: 0 8px;
+  font-size: 0.7rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.param-group .btn-outline-secondary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.param-group .btn-outline-secondary:hover::before {
+  left: 100%;
+}
+
+.param-group .btn-outline-secondary:hover {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+  border-color: var(--primary-color);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.param-group .btn-outline-secondary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.2);
+}
+
+/* 历史记录下拉菜单美化 */
+.dropdown-menu {
+  border: none;
+  border-radius: var(--border-radius-sm);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 8px 0;
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  animation: dropdownSlideIn 0.2s ease-out;
+}
+
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dropdown-menu .dropdown-item {
+  padding: 8px 16px;
+  font-size: 0.75rem;
+  color: var(--gray-700);
+  transition: all 0.2s ease;
+  border-radius: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.dropdown-menu .dropdown-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--primary-color);
+  transform: scaleY(0);
+  transition: transform 0.2s ease;
+}
+
+.dropdown-menu .dropdown-item:hover {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(102, 126, 234, 0.05) 100%);
+  color: var(--primary-color);
+  padding-left: 20px;
+}
+
+.dropdown-menu .dropdown-item:hover::before {
+  transform: scaleY(1);
+}
+
+.dropdown-menu .dropdown-item:active {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(102, 126, 234, 0.1) 100%);
+}
+
+/* 历史记录图标动画 */
+.param-group .btn-outline-secondary i {
+  transition: all 0.3s ease;
+}
+
+.param-group .btn-outline-secondary:hover i {
+  transform: rotate(180deg) scale(1.1);
+}
 .preview-section {
   flex: 1;
   background: rgba(255, 255, 255, 0.95);
