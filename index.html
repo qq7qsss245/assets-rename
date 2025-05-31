@@ -110,17 +110,39 @@
             
             <!-- 预览表格 -->
             <div id="preview-table" class="d-none">
+              <!-- 继续添加文件提示区域 -->
+              <div class="continue-add-section">
+                <div class="continue-add-content">
+                  <div class="continue-add-text">
+                    <i class="bi bi-plus-circle me-2"></i>可以继续拖拽文件或点击按钮添加更多视频
+                  </div>
+                  <button type="button" class="btn btn-outline-primary btn-sm" id="add-more-files">
+                    <i class="bi bi-folder-plus me-1"></i>添加更多文件
+                  </button>
+                </div>
+              </div>
+              
               <div class="preview-table-container">
                 <table class="table table-striped table-hover mb-0">
                   <thead class="table-dark">
                     <tr>
                       <th>原文件名</th>
                       <th>预览新文件名</th>
+                      <th width="80">操作</th>
                     </tr>
                   </thead>
                   <tbody id="preview-table-body">
                   </tbody>
                 </table>
+              </div>
+              
+              <!-- 拖拽反馈遮罩 -->
+              <div id="drag-overlay" class="drag-overlay d-none">
+                <div class="drag-overlay-content">
+                  <i class="bi bi-cloud-upload drag-overlay-icon"></i>
+                  <div class="drag-overlay-text">释放以添加更多文件</div>
+                  <div class="drag-overlay-hint">新文件将添加到现有列表中</div>
+                </div>
               </div>
             </div>
           </div>

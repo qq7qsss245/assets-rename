@@ -15,12 +15,16 @@ class FileManager {
     this.dropZone = document.getElementById('drop-zone');
     this.previewTable = document.getElementById('preview-table');
     this.previewTableBody = document.getElementById('preview-table-body');
+    this.dragOverlay = document.getElementById('drag-overlay');
+    this.addMoreButton = document.getElementById('add-more-files');
     this.init();
   }
   
   init() {
     this.setupDragAndDrop();
     this.setupClickSelect();
+    this.setupPreviewDragAndDrop();
+    this.setupAddMoreButton();
   }
   
   /**
@@ -98,36 +102,61 @@ class FileManager {
   
   /**
    * 处理文件列表
+   * @param {Array} files - 文件路径数组
+   * @param {boolean} isAppending - 是否为追加模式（默认false为替换模式）
    */
-  async handleFiles(files) {
+  async handleFiles(files, isAppending = false) {
     try {
       // 验证文件
       const { validFiles, invalidFiles } = await window.electronAPI.validateVideoFiles(files);
       
       if (validFiles.length > 0) {
+        let newFilesCount = validFiles.length;
+        
         // 更新全局状态
-        window.selectedFiles = validFiles;
+        if (isAppending && window.selectedFiles.length > 0) {
+          // 追加模式：合并到现有文件列表，去重
+          const existingFiles = new Set(window.selectedFiles);
+          const newFiles = validFiles.filter(file => !existingFiles.has(file));
+          
+          if (newFiles.length === 0) {
+            showAlert('所选文件已存在于列表中', 'info');
+            return;
+          }
+          
+          window.selectedFiles = [...window.selectedFiles, ...newFiles];
+          newFilesCount = newFiles.length;
+        } else {
+          // 替换模式：直接替换
+          window.selectedFiles = validFiles;
+        }
         
         // 切换到预览模式
         this.showPreview();
         
         // 生成预览
-        await this.generatePreview(validFiles);
+        await this.generatePreview(window.selectedFiles);
         
         // 自动填入视频名
         if (typeof autoFillVideoName === 'function') {
-          autoFillVideoName(validFiles);
+          autoFillVideoName(window.selectedFiles);
         }
         
         // 显示成功消息
+        const actionText = isAppending ? '添加' : '选择';
+        const totalFiles = window.selectedFiles.length;
+        
         if (invalidFiles.length > 0) {
           const invalidNames = invalidFiles.map(path => path.split(/[/\\]/).pop());
           showAlert(
-            `成功添加 ${validFiles.length} 个视频文件。忽略了 ${invalidFiles.length} 个不支持的文件：${invalidNames.join(', ')}`,
+            `成功${actionText} ${newFilesCount} 个视频文件${isAppending ? `（总计 ${totalFiles} 个）` : ''}。忽略了 ${invalidFiles.length} 个不支持的文件：${invalidNames.join(', ')}`,
             'warning'
           );
         } else {
-          showAlert(`成功选择 ${validFiles.length} 个视频文件`, 'success');
+          showAlert(
+            `成功${actionText} ${newFilesCount} 个视频文件${isAppending ? `（总计 ${totalFiles} 个）` : ''}`,
+            'success'
+          );
         }
       } else {
         if (invalidFiles.length > 0) {
@@ -240,22 +269,30 @@ class FileManager {
   renderPreviewTable(metadata) {
     let html = '';
     
-    metadata.forEach((item) => {
+    metadata.forEach((item, index) => {
       const previewClass = item.success ? 'preview-status-success' : 'preview-status-error';
       
       html += `
-        <tr>
+        <tr data-file-index="${index}">
           <td class="preview-filename" title="${item.originalPath || item.originalName}">
             ${item.originalName}
           </td>
           <td class="preview-filename ${previewClass}" title="${item.previewName}">
             ${item.previewName}
           </td>
+          <td class="text-center">
+            <button type="button" class="delete-file-btn" data-file-index="${index}" title="删除此文件">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
         </tr>
       `;
     });
     
     this.previewTableBody.innerHTML = html;
+    
+    // 绑定删除按钮事件
+    this.bindDeleteButtons();
   }
   
   /**
@@ -264,6 +301,155 @@ class FileManager {
   async refreshPreview() {
     if (window.selectedFiles.length === 0) return;
     await this.generatePreview(window.selectedFiles);
+  }
+  
+  /**
+   * 设置预览界面的拖拽功能
+   */
+  setupPreviewDragAndDrop() {
+    // 阻止默认拖拽行为
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      this.previewTable.addEventListener(eventName, this.preventDefaults, false);
+    });
+    
+    // 拖拽进入预览区域
+    this.previewTable.addEventListener('dragenter', (e) => {
+      if (e.dataTransfer.files.length > 0) {
+        this.showDragOverlay();
+      }
+    }, false);
+    
+    // 拖拽在预览区域上方
+    this.previewTable.addEventListener('dragover', (e) => {
+      if (e.dataTransfer.files.length > 0) {
+        this.showDragOverlay();
+      }
+    }, false);
+    
+    // 拖拽离开预览区域
+    this.previewTable.addEventListener('dragleave', (e) => {
+      // 检查是否真的离开了预览区域（而不是进入子元素）
+      if (!this.previewTable.contains(e.relatedTarget)) {
+        this.hideDragOverlay();
+      }
+    }, false);
+    
+    // 处理文件拖拽到预览区域
+    this.previewTable.addEventListener('drop', async (e) => {
+      this.hideDragOverlay();
+      
+      const dt = e.dataTransfer;
+      const files = Array.from(dt.files);
+      
+      // 获取文件路径
+      const filePaths = [];
+      for (const file of files) {
+        try {
+          const filePath = await window.electronAPI.getPathForFile(file);
+          if (filePath) {
+            filePaths.push(filePath);
+          }
+        } catch (error) {
+          console.error('获取文件路径失败:', error);
+        }
+      }
+      
+      if (filePaths.length > 0) {
+        // 追加模式处理文件
+        this.handleFiles(filePaths, true);
+      } else {
+        showAlert('无法获取拖拽文件的路径，请使用点击选择文件功能', 'danger');
+      }
+    }, false);
+  }
+  
+  /**
+   * 设置添加更多文件按钮
+   */
+  setupAddMoreButton() {
+    if (this.addMoreButton) {
+      this.addMoreButton.addEventListener('click', async () => {
+        try {
+          const files = await window.electronAPI.selectFiles();
+          if (files && files.length > 0) {
+            // 追加模式处理文件
+            this.handleFiles(files, true);
+          }
+        } catch (error) {
+          console.error('选择文件失败:', error);
+          showAlert('选择文件失败', 'danger');
+        }
+      });
+    }
+  }
+  
+  /**
+   * 显示拖拽遮罩
+   */
+  showDragOverlay() {
+    if (this.dragOverlay) {
+      this.dragOverlay.classList.remove('d-none');
+    }
+  }
+  
+  /**
+   * 隐藏拖拽遮罩
+   */
+  hideDragOverlay() {
+    if (this.dragOverlay) {
+      this.dragOverlay.classList.add('d-none');
+    }
+  }
+  
+  /**
+   * 绑定删除按钮事件
+   */
+  bindDeleteButtons() {
+    const deleteButtons = this.previewTableBody.querySelectorAll('.delete-file-btn');
+    deleteButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const fileIndex = parseInt(button.getAttribute('data-file-index'));
+        this.deleteFile(fileIndex);
+      });
+    });
+  }
+  
+  /**
+   * 删除文件
+   * @param {number} fileIndex - 文件索引
+   */
+  async deleteFile(fileIndex) {
+    if (fileIndex < 0 || fileIndex >= window.selectedFiles.length) {
+      console.error('无效的文件索引:', fileIndex);
+      return;
+    }
+    
+    const fileName = window.selectedFiles[fileIndex].split(/[/\\]/).pop();
+    
+    // 确认删除
+    if (!confirm(`确定要删除文件 "${fileName}" 吗？`)) {
+      return;
+    }
+    
+    try {
+      // 从数组中移除文件
+      window.selectedFiles.splice(fileIndex, 1);
+      
+      // 检查是否还有文件
+      if (window.selectedFiles.length === 0) {
+        // 没有文件了，返回拖拽界面
+        this.showDropZone();
+        showAlert('已删除所有文件', 'info');
+      } else {
+        // 重新生成预览
+        await this.generatePreview(window.selectedFiles);
+        showAlert(`已删除文件 "${fileName}"`, 'success');
+      }
+    } catch (error) {
+      console.error('删除文件失败:', error);
+      showAlert('删除文件失败', 'danger');
+    }
   }
 }
 

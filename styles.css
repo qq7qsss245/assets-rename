@@ -344,6 +344,142 @@ body {
   font-style: italic;
 }
 
+/* 继续添加文件区域样式 */
+.continue-add-section {
+  padding: 16px 20px;
+  background: linear-gradient(135deg, var(--gray-50) 0%, rgba(255, 255, 255, 0.8) 100%);
+  border-bottom: 1px solid var(--gray-200);
+  border-radius: var(--border-radius-sm) var(--border-radius-sm) 0 0;
+}
+
+.continue-add-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.continue-add-text {
+  color: var(--gray-600);
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.continue-add-text i {
+  color: var(--primary-color);
+}
+
+#add-more-files {
+  border-radius: var(--border-radius-sm);
+  font-size: 0.75rem;
+  padding: 6px 12px;
+  height: 32px;
+  border: 1px solid var(--primary-color);
+  color: var(--primary-color);
+  background: white;
+  transition: all 0.2s ease;
+}
+
+#add-more-files:hover {
+  background: var(--primary-color);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 删除按钮样式 */
+.delete-file-btn {
+  background: none;
+  border: none;
+  color: var(--danger-color);
+  font-size: 0.9rem;
+  padding: 4px 8px;
+  border-radius: var(--border-radius-sm);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+
+.delete-file-btn:hover {
+  background: var(--danger-color);
+  color: white;
+  transform: scale(1.1);
+  box-shadow: var(--shadow-sm);
+}
+
+.delete-file-btn:active {
+  transform: scale(0.95);
+}
+
+/* 拖拽反馈遮罩样式 */
+.drag-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(102, 126, 234, 0.15);
+  backdrop-filter: blur(8px);
+  border-radius: var(--border-radius);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--primary-color);
+  animation: dragOverlayPulse 1.5s ease-in-out infinite;
+}
+
+.drag-overlay-content {
+  text-align: center;
+  color: var(--primary-color);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2rem;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(10px);
+}
+
+.drag-overlay-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  display: block;
+  filter: drop-shadow(0 4px 8px rgba(102, 126, 234, 0.3));
+}
+
+.drag-overlay-text {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.drag-overlay-hint {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+@keyframes dragOverlayPulse {
+  0%, 100% {
+    border-color: var(--primary-color);
+    background: rgba(102, 126, 234, 0.15);
+  }
+  50% {
+    border-color: var(--primary-hover);
+    background: rgba(102, 126, 234, 0.25);
+  }
+}
+
+/* 预览表格容器相对定位 */
+#preview-table {
+  position: relative;
+}
+
 /* 操作按钮区域 - 紧凑设计 */
 .actions-section {
   padding: 20px;
