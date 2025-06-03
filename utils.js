@@ -112,13 +112,11 @@ function showAlert(message, type) {
   toastDiv.classList.add(bgClass);
   
   toastDiv.innerHTML = `
-    <div class="d-flex">
-      <div class="toast-body d-flex align-items-center">
-        <i class="bi ${iconClass} me-2"></i>
-        ${message}
-      </div>
-      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    <div class="toast-body d-flex align-items-center">
+      <i class="bi ${iconClass} me-2"></i>
+      ${message}
     </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
   `;
   
   // 添加到容器
