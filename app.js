@@ -29,7 +29,7 @@ async function initializeApp() {
     }
     
     // 初始化各个组件
-    safeInitializeDropdowns();
+    // 历史记录功能会自动初始化
     setupFormFieldListeners();
     setupFieldValidation();
     
