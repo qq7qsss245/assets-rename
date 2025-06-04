@@ -210,8 +210,8 @@ async function renameFiles(filePaths, fields, options = {}) {
   const results = [];
   const successfulRenames = []; // 存储成功的重命名操作，用于撤回
   
-  // 计算每个文件在其比例组内的序号
-  const ratioGroupIndexes = await calculateRatioGroupIndexes(filePaths);
+  // 计算每个文件在其比例+视频名组内的序号
+  const ratioGroupIndexes = await calculateRatioGroupIndexes(filePaths, fields);
   
   // 按原始顺序处理文件，使用比例组内的序号
   for (let i = 0; i < filePaths.length; i++) {
@@ -422,37 +422,57 @@ function clearUndoData() {
 }
 
 /**
- * 按视频比例分组并计算每个文件在其比例组内的序号
+ * 按视频比例和处理后的视频文件名分组并计算每个文件在其组内的序号
  * @param {Array<string>} filePaths - 文件路径数组
- * @returns {Promise<Map<number, number>>} 文件索引到比例组内序号的映射
+ * @param {Object} fields - 用户填写的字段（用于确定最终视频名）
+ * @returns {Promise<Map<number, number>>} 文件索引到组内序号的映射
  */
-async function calculateRatioGroupIndexes(filePaths) {
-  // 第一步：获取所有文件的比例信息，按比例分组
-  const filesByRatio = new Map();
+async function calculateRatioGroupIndexes(filePaths, fields = null) {
+  // 第一步：获取所有文件的比例信息和处理后的视频名，按比例+视频名分组
+  const filesByGroup = new Map();
   
   for (let i = 0; i < filePaths.length; i++) {
     const filePath = filePaths[i];
+    const ext = path.extname(filePath);
     
     // 检测视频尺寸
     const { width, height } = await getVideoSize(filePath);
     const ratio = getNearestRatio(width, height);
     
-    if (!filesByRatio.has(ratio)) {
-      filesByRatio.set(ratio, []);
+    // 确定最终使用的视频名
+    let finalVideoName = '';
+    if (fields && fields.video && fields.video !== '视频名') {
+      // 如果用户填写了视频名且不是默认值，使用用户填写的
+      finalVideoName = fields.video;
+    } else {
+      // 否则使用从原文件名提取的视频名
+      const originalFileName = path.basename(filePath, ext);
+      finalVideoName = extractVideoName(originalFileName);
     }
     
-    filesByRatio.get(ratio).push({
+    // 创建分组键：比例 + 处理后的视频名
+    const groupKey = `${ratio}_${finalVideoName}`;
+    
+    if (!filesByGroup.has(groupKey)) {
+      filesByGroup.set(groupKey, []);
+    }
+    
+    filesByGroup.get(groupKey).push({
       originalIndex: i,
-      filePath: filePath
+      filePath: filePath,
+      ratio: ratio,
+      finalVideoName: finalVideoName
     });
   }
   
-  // 第二步：为每个比例组分配序号
-  const fileIndexMap = new Map(); // 存储每个文件的比例组内序号
+  // 第二步：为每个分组分配序号
+  const fileIndexMap = new Map(); // 存储每个文件的组内序号
   
-  filesByRatio.forEach((files, ratio) => {
+  filesByGroup.forEach((files, groupKey) => {
+    console.log(`=== 分组 ${groupKey} 包含 ${files.length} 个文件 ===`);
     files.forEach((fileInfo, indexInGroup) => {
       fileIndexMap.set(fileInfo.originalIndex, indexInGroup);
+      console.log(`文件 ${fileInfo.originalIndex + 1}: ${path.basename(fileInfo.filePath)} -> 组内序号: ${indexInGroup}`);
     });
   });
   

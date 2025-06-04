@@ -145,8 +145,8 @@ ipcMain.handle('get-file-metadata', async (event, data) => {
   console.log('=== 获取文件元数据 ===');
   console.log('文件数量:', filePaths.length);
   
-  // 计算每个文件在其比例组内的序号
-  const ratioGroupIndexes = await calculateRatioGroupIndexes(filePaths);
+  // 计算每个文件在其比例+视频名组内的序号
+  const ratioGroupIndexes = await calculateRatioGroupIndexes(filePaths, fields);
   
   for (let i = 0; i < filePaths.length; i++) {
     const filePath = filePaths[i];
@@ -239,8 +239,8 @@ ipcMain.handle('detect-filename-conflicts', async (event, data) => {
   const nameMap = new Map();
   
   try {
-    // 计算每个文件在其比例组内的序号
-    const ratioGroupIndexes = await calculateRatioGroupIndexes(filePaths);
+    // 计算每个文件在其比例+视频名组内的序号
+    const ratioGroupIndexes = await calculateRatioGroupIndexes(filePaths, fields);
     
     for (let i = 0; i < filePaths.length; i++) {
       const filePath = filePaths[i];
@@ -264,7 +264,9 @@ ipcMain.handle('detect-filename-conflicts', async (event, data) => {
       if (ratioGroupIndex > 0) {
         videoSuffix = String(ratioGroupIndex + 1); // 第二个文件用2，第三个文件用3，以此类推
       }
-      const previewName = buildName(fields, ext, ratio, finalLanguage, videoDuration, videoSuffix);
+      // 获取原文件名（不含路径和扩展名）
+      const originalFileName = path.basename(filePath, ext);
+      const previewName = buildName(fields, ext, ratio, finalLanguage, videoDuration, videoSuffix, originalFileName);
       
       if (!nameMap.has(previewName)) {
         nameMap.set(previewName, []);

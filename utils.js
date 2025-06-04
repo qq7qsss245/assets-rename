@@ -24,6 +24,7 @@ function extractVideoName(filename) {
 
 /**
  * 自动填入视频名（仅当视频名字段为空时）
+ * 注意：现在视频名字段可以为空，此函数保留但不再自动填入
  * @param {Array} files - 文件路径数组
  */
 function autoFillVideoName(files) {
@@ -33,29 +34,15 @@ function autoFillVideoName(files) {
   console.log('trim后是否为空:', videoField.value.trim() === '');
   console.log('文件数量:', files ? files.length : 0);
   
-  if (videoField.value.trim() === '' && files && files.length > 0) {
-    // 取第一个文件的文件名进行提取
-    const firstFileName = files[0].split(/[/\\]/).pop();
-    console.log('第一个文件名:', firstFileName);
-    const extractedName = extractVideoName(firstFileName);
-    console.log('提取的视频名:', extractedName);
-    if (extractedName) {
-      videoField.value = extractedName;
-      
-      // 🔧 修复：手动触发事件以更新验证状态和预览
-      console.log('触发input和change事件以更新验证状态...');
-      const inputEvent = new Event('input', { bubbles: true });
-      const changeEvent = new Event('change', { bubbles: true });
-      videoField.dispatchEvent(inputEvent);
-      videoField.dispatchEvent(changeEvent);
-      
-      console.log('自动填入视频名成功:', extractedName);
-      console.log('验证状态和预览已更新');
-    } else {
-      console.log('提取的视频名为空，未填入');
-    }
-  } else {
-    console.log('不满足自动填入条件');
+  // 现在视频名字段可以为空，不再自动填入
+  // 用户可以选择留空，系统会自动使用文件名（去除语言标识）
+  console.log('视频名字段现在可以为空，不自动填入');
+  
+  // 仍然触发事件以更新预览
+  if (files && files.length > 0) {
+    console.log('触发change事件以更新预览...');
+    const changeEvent = new Event('change', { bubbles: true });
+    videoField.dispatchEvent(changeEvent);
   }
 }
 
@@ -184,7 +171,6 @@ class FieldValidator {
     switch (fieldName) {
       case 'product':
       case 'template':
-      case 'video':
       case 'author':
         if (!value || value.trim().length === 0) {
           isValid = false;
@@ -195,6 +181,19 @@ class FieldValidator {
         } else if (!/^[a-zA-Z0-9\u4e00-\u9fa5_-]+$/.test(value.trim())) {
           isValid = false;
           message = '只能包含字母、数字、中文、下划线和连字符';
+        }
+        break;
+      case 'video':
+        // 视频名字段为可选，如果填写则验证格式
+        if (value && value.trim().length > 0) {
+          const trimmedValue = value.trim();
+          if (trimmedValue.length > 50) {
+            isValid = false;
+            message = '字段长度不能超过50个字符';
+          } else if (!/^[a-zA-Z0-9\u4e00-\u9fa5_-]+$/.test(trimmedValue)) {
+            isValid = false;
+            message = '只能包含字母、数字、中文、下划线和连字符';
+          }
         }
         break;
       case 'duration':
@@ -241,8 +240,8 @@ class FieldValidator {
    * @returns {Object} 验证结果 {allValid, errors}
    */
   static validateAllFields() {
-    const requiredFields = ['product', 'template', 'video', 'author', 'duration'];
-    const optionalFields = ['language'];
+    const requiredFields = ['product', 'template', 'author', 'duration'];
+    const optionalFields = ['video', 'language'];
     let allValid = true;
     const errors = [];
     
