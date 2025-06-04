@@ -6,6 +6,9 @@
 // 历史记录存储键名
 const HISTORY_STORAGE_KEY = 'renameToolHistory';
 
+// 上次输入值存储键名
+const LAST_VALUES_STORAGE_KEY = 'renameToolLastValues';
+
 // 支持历史记录的字段列表
 const HISTORY_FIELDS = ['product', 'template', 'video', 'author', 'duration', 'language'];
 
@@ -50,6 +53,84 @@ function saveHistoryData(data) {
     } catch (error) {
         console.warn('保存历史记录失败:', error);
     }
+}
+
+/**
+ * 获取上次输入的值
+ * @returns {Object} 上次输入的值对象
+ */
+function getLastValues() {
+    try {
+        const stored = localStorage.getItem(LAST_VALUES_STORAGE_KEY);
+        if (stored) {
+            const data = JSON.parse(stored);
+            // 确保所有字段都存在
+            const result = {};
+            HISTORY_FIELDS.forEach(field => {
+                result[field] = data[field] || '';
+            });
+            return result;
+        }
+    } catch (error) {
+        console.warn('读取上次输入值失败:', error);
+    }
+    
+    // 返回默认空数据
+    const defaultData = {};
+    HISTORY_FIELDS.forEach(field => {
+        defaultData[field] = '';
+    });
+    return defaultData;
+}
+
+/**
+ * 保存当前输入的值
+ */
+function saveCurrentValues() {
+    try {
+        const currentValues = {};
+        HISTORY_FIELDS.forEach(fieldName => {
+            const field = document.getElementById(fieldName);
+            if (field) {
+                currentValues[fieldName] = field.value.trim();
+            }
+        });
+        localStorage.setItem(LAST_VALUES_STORAGE_KEY, JSON.stringify(currentValues));
+        console.log('当前输入值已保存:', currentValues);
+    } catch (error) {
+        console.warn('保存当前输入值失败:', error);
+    }
+}
+
+/**
+ * 恢复上次输入的值
+ */
+function restoreLastValues() {
+    console.log('开始恢复上次输入的值...');
+    const lastValues = getLastValues();
+    
+    HISTORY_FIELDS.forEach(fieldName => {
+        const field = document.getElementById(fieldName);
+        const lastValue = lastValues[fieldName];
+        
+        if (field && lastValue && lastValue.trim() !== '') {
+            // 只有当前字段为空时才恢复值
+            if (field.value.trim() === '') {
+                field.value = lastValue;
+                console.log(`恢复字段 ${fieldName}: "${lastValue}"`);
+                
+                // 触发事件以更新验证状态和预览
+                const inputEvent = new Event('input', { bubbles: true });
+                const changeEvent = new Event('change', { bubbles: true });
+                field.dispatchEvent(inputEvent);
+                field.dispatchEvent(changeEvent);
+            } else {
+                console.log(`字段 ${fieldName} 已有值，跳过恢复`);
+            }
+        }
+    });
+    
+    console.log('值恢复过程完成');
 }
 
 /**
@@ -244,6 +325,11 @@ function initializeHistory() {
     
     console.log('开始初始化历史记录功能...');
     
+    // 延迟恢复上次输入的值，确保所有组件都已初始化
+    setTimeout(() => {
+        restoreLastValues();
+    }, 100);
+    
     // 为每个字段初始化功能
     HISTORY_FIELDS.forEach(fieldName => {
         const input = document.getElementById(fieldName);
@@ -280,6 +366,15 @@ function initializeHistory() {
                     addToHistory(fieldName, value);
                 }
             });
+            
+            // 监听输入框的input事件，实时保存当前值
+            input.addEventListener('input', () => {
+                // 延迟保存，避免频繁操作
+                clearTimeout(input.saveTimeout);
+                input.saveTimeout = setTimeout(() => {
+                    saveCurrentValues();
+                }, 500);
+            });
         }
     });
     
@@ -292,6 +387,11 @@ function initializeHistory() {
         if (!isDropdownClick && !isButtonClick) {
             hideAllDropdowns();
         }
+    });
+    
+    // 在页面卸载前保存当前值
+    window.addEventListener('beforeunload', () => {
+        saveCurrentValues();
     });
     
     console.log('历史记录功能初始化完成');
@@ -309,5 +409,8 @@ window.historyManager = {
     initializeHistory,
     showDropdown,
     hideDropdown,
-    hideAllDropdowns
+    hideAllDropdowns,
+    getLastValues,
+    saveCurrentValues,
+    restoreLastValues
 };

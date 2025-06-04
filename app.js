@@ -181,6 +181,11 @@ async function handleRenameFiles() {
     addToHistory('language', language);
   }
   
+  // 保存当前输入值
+  if (window.historyManager && typeof window.historyManager.saveCurrentValues === 'function') {
+    window.historyManager.saveCurrentValues();
+  }
+  
   // 准备重命名参数
   const fields = { product, template, video, author, duration, language };
   const options = { useNumberSuffix: true }; // 始终启用数字后缀序号
