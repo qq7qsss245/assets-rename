@@ -271,6 +271,35 @@ class FileManager {
    * 渲染预览表格
    */
   renderPreviewTable(metadata) {
+    // === 焦点状态保护机制开始 ===
+    console.log('[焦点保护] 开始保存焦点状态');
+    
+    // 保存当前活动元素和焦点状态
+    const activeElement = document.activeElement;
+    const isInputFocused = activeElement && (
+      activeElement.tagName === 'INPUT' ||
+      activeElement.tagName === 'TEXTAREA' ||
+      activeElement.contentEditable === 'true'
+    );
+    
+    // 保存输入框的详细状态
+    let focusRestoreInfo = null;
+    if (isInputFocused) {
+      focusRestoreInfo = {
+        element: activeElement,
+        id: activeElement.id,
+        selectionStart: activeElement.selectionStart,
+        selectionEnd: activeElement.selectionEnd,
+        value: activeElement.value
+      };
+      console.log('[焦点保护] 检测到输入框焦点，保存状态:', {
+        id: focusRestoreInfo.id,
+        selectionStart: focusRestoreInfo.selectionStart,
+        selectionEnd: focusRestoreInfo.selectionEnd
+      });
+    }
+    // === 焦点状态保护机制结束 ===
+    
     let html = '';
     
     metadata.forEach((item, index) => {
@@ -298,13 +327,44 @@ class FileManager {
     // 绑定删除按钮事件
     this.bindDeleteButtons();
     
-    // 自动选中第一条记录（如果有记录的话）
+    // === 焦点恢复机制开始 ===
+    // 优化自动焦点转移逻辑：只有在没有输入框焦点时才自动选中表格行
     if (metadata.length > 0) {
-      // 延迟选中，确保DOM已更新
-      setTimeout(() => {
-        this.selectRow(0);
-      }, 10);
+      if (isInputFocused && focusRestoreInfo) {
+        // 恢复输入框焦点
+        console.log('[焦点保护] 尝试恢复输入框焦点');
+        setTimeout(() => {
+          try {
+            // 重新获取元素（因为DOM可能已更新）
+            const elementToFocus = document.getElementById(focusRestoreInfo.id) || focusRestoreInfo.element;
+            
+            if (elementToFocus && elementToFocus.focus) {
+              elementToFocus.focus();
+              
+              // 恢复光标位置
+              if (typeof elementToFocus.setSelectionRange === 'function' &&
+                  focusRestoreInfo.selectionStart !== null &&
+                  focusRestoreInfo.selectionEnd !== null) {
+                elementToFocus.setSelectionRange(focusRestoreInfo.selectionStart, focusRestoreInfo.selectionEnd);
+              }
+              
+              console.log('[焦点保护] 成功恢复输入框焦点和光标位置');
+            } else {
+              console.warn('[焦点保护] 无法找到要恢复焦点的元素:', focusRestoreInfo.id);
+            }
+          } catch (error) {
+            console.error('[焦点保护] 恢复焦点失败:', error);
+          }
+        }, 10);
+      } else {
+        // 没有输入框焦点时才自动选中表格行
+        console.log('[焦点保护] 没有输入框焦点，自动选中第一行');
+        setTimeout(() => {
+          this.selectRow(0);
+        }, 10);
+      }
     }
+    // === 焦点恢复机制结束 ===
   }
   
   /**
@@ -464,11 +524,26 @@ class FileManager {
     // 设置新的选中行
     this.selectedRowIndex = fileIndex;
     
-    // 添加选中样式并设置焦点
+    // 添加选中样式
     const row = this.previewTableBody.querySelector(`tr[data-file-index="${fileIndex}"]`);
     if (row) {
       row.classList.add('table-row-selected');
-      row.focus();
+      
+      // 检查当前是否有输入框获得焦点
+      const activeElement = document.activeElement;
+      const isInputFocused = activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.contentEditable === 'true'
+      );
+      
+      // 只有在没有输入框焦点时才设置表格行焦点
+      if (!isInputFocused) {
+        row.focus();
+        console.log('[焦点保护] 设置表格行焦点，索引:', fileIndex);
+      } else {
+        console.log('[焦点保护] 检测到输入框焦点，跳过表格行焦点设置');
+      }
       
       // 确保选中的行在视口内可见
       row.scrollIntoView({
@@ -955,7 +1030,7 @@ class ProgressManager {
  */
 function setupFormFieldListeners() {
   let debounceTimer;
-  const debounceDelay = 500;
+  const debounceDelay = 150; // 150毫秒防抖延迟，减少频繁刷新，改善用户体验
   
   function debouncedRefresh() {
     clearTimeout(debounceTimer);

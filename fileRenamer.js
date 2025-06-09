@@ -6,6 +6,64 @@ const ffmpeg = require('fluent-ffmpeg');
 // 撤回功能数据存储
 let lastRenameOperation = null;
 
+// 视频元数据缓存
+const videoMetadataCache = new Map();
+
+/**
+ * 获取文件的修改时间戳
+ * @param {string} filePath - 文件路径
+ * @returns {number|null} 文件修改时间戳，如果文件不存在则返回null
+ */
+function getFileTimestamp(filePath) {
+  try {
+    const stats = fs.statSync(filePath);
+    return stats.mtime.getTime();
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * 检查缓存是否有效
+ * @param {string} filePath - 文件路径
+ * @param {Object} cachedData - 缓存的数据
+ * @returns {boolean} 缓存是否有效
+ */
+function isCacheValid(filePath, cachedData) {
+  if (!cachedData || !cachedData.timestamp) {
+    return false;
+  }
+  
+  const currentTimestamp = getFileTimestamp(filePath);
+  if (currentTimestamp === null) {
+    return false;
+  }
+  
+  return cachedData.timestamp === currentTimestamp;
+}
+
+/**
+ * 清理无效的缓存条目
+ * @param {Array<string>} validFilePaths - 当前有效的文件路径列表
+ */
+function cleanupCache(validFilePaths = []) {
+  const validPathSet = new Set(validFilePaths);
+  
+  for (const [filePath, cachedData] of videoMetadataCache.entries()) {
+    // 如果文件不在有效列表中，或者缓存已过期，则删除
+    if (!validPathSet.has(filePath) || !isCacheValid(filePath, cachedData)) {
+      videoMetadataCache.delete(filePath);
+    }
+  }
+}
+
+/**
+ * 手动清理所有缓存
+ */
+function clearAllCache() {
+  videoMetadataCache.clear();
+}
+
 function getTodayStr() {
   const now = new Date();
   const yy = String(now.getFullYear()).slice(-2);
@@ -159,14 +217,40 @@ function getUniqueVideoName(dir, fields, ext, ratio, language, videoDuration, fi
 
 function getVideoSize(filePath) {
   return new Promise((resolve, reject) => {
+    // 检查缓存
+    const cachedData = videoMetadataCache.get(filePath);
+    if (cachedData && isCacheValid(filePath, cachedData)) {
+      console.log(`使用缓存的视频尺寸: ${filePath}`);
+      return resolve({
+        width: cachedData.width,
+        height: cachedData.height
+      });
+    }
+
+    console.log(`获取视频尺寸: ${filePath}`);
     ffmpeg.ffprobe(filePath, (err, metadata) => {
-      if (err) return resolve({ width: null, height: null });
-      const stream = metadata.streams.find(s => s.width && s.height);
-      if (stream) {
-        resolve({ width: stream.width, height: stream.height });
-      } else {
-        resolve({ width: null, height: null });
+      if (err) {
+        console.error(`获取视频尺寸失败: ${filePath}`, err.message);
+        return resolve({ width: null, height: null });
       }
+      
+      const stream = metadata.streams.find(s => s.width && s.height);
+      const width = stream ? stream.width : null;
+      const height = stream ? stream.height : null;
+      
+      // 缓存结果
+      const timestamp = getFileTimestamp(filePath);
+      if (timestamp !== null) {
+        const existingCache = videoMetadataCache.get(filePath) || {};
+        videoMetadataCache.set(filePath, {
+          ...existingCache,
+          width,
+          height,
+          timestamp
+        });
+      }
+      
+      resolve({ width, height });
     });
   });
 }
@@ -178,22 +262,45 @@ function getVideoSize(filePath) {
  */
 function getVideoDuration(filePath) {
   return new Promise((resolve, reject) => {
+    // 检查缓存
+    const cachedData = videoMetadataCache.get(filePath);
+    if (cachedData && isCacheValid(filePath, cachedData) && cachedData.duration !== undefined) {
+      console.log(`使用缓存的视频时长: ${filePath}`);
+      return resolve(cachedData.duration);
+    }
+
+    console.log(`获取视频时长: ${filePath}`);
     ffmpeg.ffprobe(filePath, (err, metadata) => {
-      if (err) return resolve(null);
+      if (err) {
+        console.error(`获取视频时长失败: ${filePath}`, err.message);
+        return resolve(null);
+      }
+      
+      let duration = null;
+      
       // 尝试从格式信息中获取时长
       if (metadata.format && metadata.format.duration) {
-        // 将浮点数时长转换为整数秒
-        resolve(Math.round(metadata.format.duration));
-        return;
+        duration = Math.round(metadata.format.duration);
+      } else {
+        // 如果格式信息中没有时长，尝试从视频流中获取
+        const videoStream = metadata.streams.find(s => s.codec_type === 'video');
+        if (videoStream && videoStream.duration) {
+          duration = Math.round(videoStream.duration);
+        }
       }
-      // 如果格式信息中没有时长，尝试从视频流中获取
-      const videoStream = metadata.streams.find(s => s.codec_type === 'video');
-      if (videoStream && videoStream.duration) {
-        resolve(Math.round(videoStream.duration));
-        return;
+      
+      // 缓存结果
+      const timestamp = getFileTimestamp(filePath);
+      if (timestamp !== null) {
+        const existingCache = videoMetadataCache.get(filePath) || {};
+        videoMetadataCache.set(filePath, {
+          ...existingCache,
+          duration,
+          timestamp
+        });
       }
-      // 无法获取时长
-      resolve(null);
+      
+      resolve(duration);
     });
   });
 }
@@ -492,5 +599,7 @@ module.exports = {
   buildName,
   getTodayStr,
   determineFinalLanguage,
-  calculateRatioGroupIndexes
+  calculateRatioGroupIndexes,
+  cleanupCache,
+  clearAllCache
 };

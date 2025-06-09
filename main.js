@@ -2,7 +2,7 @@ const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { selectFiles } = require('./fileSelector');
-const { renameFiles, undoLastRename, getUndoStatus, clearUndoData, getVideoSize, getVideoDuration, extractLanguageCode, extractVideoName, getNearestRatio, buildName, getTodayStr, determineFinalLanguage, calculateRatioGroupIndexes } = require('./fileRenamer');
+const { renameFiles, undoLastRename, getUndoStatus, clearUndoData, getVideoSize, getVideoDuration, extractLanguageCode, extractVideoName, getNearestRatio, buildName, getTodayStr, determineFinalLanguage, calculateRatioGroupIndexes, cleanupCache, clearAllCache } = require('./fileRenamer');
 const ffmpeg = require('fluent-ffmpeg');
 const ffprobeStatic = require('ffprobe-static');
 
@@ -99,7 +99,48 @@ app.on('window-all-closed', function () {
 });
 
 ipcMain.handle('select-files', async () => {
-  return await selectFiles();
+  const result = await selectFiles();
+  
+  // 如果选择了文件，预加载元数据到缓存
+  if (result && result.length > 0) {
+    console.log(`开始预加载 ${result.length} 个文件的元数据...`);
+    
+    // 清理旧缓存，只保留当前选择的文件
+    cleanupCache(result);
+    
+    // 并行预加载所有文件的元数据
+    const preloadPromises = result.map(async (filePath, index) => {
+      try {
+        console.log(`预加载文件 ${index + 1}/${result.length}: ${path.basename(filePath)}`);
+        
+        // 并行获取尺寸和时长
+        const [sizeResult, durationResult] = await Promise.all([
+          getVideoSize(filePath),
+          getVideoDuration(filePath)
+        ]);
+        
+        console.log(`完成预加载: ${path.basename(filePath)} - ${sizeResult.width}x${sizeResult.height}, ${durationResult}s`);
+      } catch (error) {
+        console.error(`预加载失败: ${filePath}`, error.message);
+      }
+    });
+    
+    // 等待所有预加载完成
+    await Promise.all(preloadPromises);
+ipcMain.handle('clear-video-cache', async () => {
+  try {
+    clearAllCache();
+    console.log('视频元数据缓存已清理');
+    return { success: true };
+  } catch (error) {
+    console.error('清理缓存失败:', error);
+    return { success: false, error: error.message };
+  }
+});
+    console.log('所有文件元数据预加载完成');
+  }
+  
+  return result;
 });
 
 ipcMain.handle('rename-files', async (event, data) => {

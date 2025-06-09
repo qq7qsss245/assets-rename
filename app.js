@@ -45,6 +45,11 @@ async function initializeApp() {
     // 设置主要事件监听器
     setupMainEventListeners();
     
+    // 添加缓存管理按钮（用于调试和优化）
+    if (typeof addCacheManagementButton === 'function') {
+      addCacheManagementButton();
+    }
+    
     // 初始化工具提示
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
     tooltipTriggerList.map(function (tooltipTriggerEl) {

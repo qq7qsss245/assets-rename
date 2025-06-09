@@ -340,3 +340,55 @@ function showConfirmDialog(filesToRename) {
     }
   });
 }
+/**
+ * 缓存管理工具函数
+ */
+
+/**
+ * 显示缓存状态信息
+ * @param {number} cacheSize - 缓存条目数量
+ */
+function showCacheStatus(cacheSize) {
+  if (cacheSize > 0) {
+    showToast(`已缓存 ${cacheSize} 个文件的元数据`, 'info');
+  }
+}
+
+/**
+ * 清理缓存并显示通知
+ */
+async function clearVideoCache() {
+  try {
+    await window.electronAPI.clearVideoCache();
+    showToast('视频元数据缓存已清理', 'success');
+  } catch (error) {
+    console.error('清理缓存失败:', error);
+    showToast('清理缓存失败', 'danger');
+  }
+}
+/**
+ * 添加缓存管理按钮到界面（用于调试）
+ */
+function addCacheManagementButton() {
+  // 检查是否已经添加过按钮
+  if (document.getElementById('clearCacheBtn')) {
+    return;
+  }
+
+  // 创建清理缓存按钮
+  const clearCacheBtn = document.createElement('button');
+  clearCacheBtn.id = 'clearCacheBtn';
+  clearCacheBtn.className = 'btn btn-outline-secondary btn-sm ms-2';
+  clearCacheBtn.innerHTML = '<i class="bi bi-trash"></i> 清理缓存';
+  clearCacheBtn.title = '清理视频元数据缓存';
+  
+  clearCacheBtn.addEventListener('click', async () => {
+    await clearVideoCache();
+  });
+
+  // 将按钮添加到文件选择按钮旁边
+  const fileSelectBtn = document.getElementById('selectFilesBtn');
+  if (fileSelectBtn && fileSelectBtn.parentNode) {
+    fileSelectBtn.parentNode.appendChild(clearCacheBtn);
+  }
+}

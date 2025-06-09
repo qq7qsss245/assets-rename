@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   undoLastRename: () => ipcRenderer.invoke('undo-last-rename'),
   getUndoStatus: () => ipcRenderer.invoke('get-undo-status'),
   clearUndoData: () => ipcRenderer.invoke('clear-undo-data'),
+  clearVideoCache: () => ipcRenderer.invoke('clear-video-cache'),
   getPathForFile: (file) => {
     try {
       // 使用 Electron 的 webUtils.getPathForFile 获取拖拽文件的真实路径
