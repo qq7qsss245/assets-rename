@@ -178,9 +178,9 @@ class FieldValidator {
         } else if (value.trim().length > 50) {
           isValid = false;
           message = '字段长度不能超过50个字符';
-        } else if (!/^[a-zA-Z0-9\u4e00-\u9fa5_-]+$/.test(value.trim())) {
+        } else if (!/^[a-zA-Z0-9\u4e00-\u9fa5_&-]+$/.test(value.trim())) {
           isValid = false;
-          message = '只能包含字母、数字、中文、下划线和连字符';
+          message = '只能包含字母、数字、中文、下划线、连字符和&符号';
         }
         break;
       case 'video':
@@ -190,9 +190,9 @@ class FieldValidator {
           if (trimmedValue.length > 50) {
             isValid = false;
             message = '字段长度不能超过50个字符';
-          } else if (!/^[a-zA-Z0-9\u4e00-\u9fa5_-]+$/.test(trimmedValue)) {
+          } else if (!/^[a-zA-Z0-9\u4e00-\u9fa5_&-]+$/.test(trimmedValue)) {
             isValid = false;
-            message = '只能包含字母、数字、中文、下划线和连字符';
+            message = '只能包含字母、数字、中文、下划线、连字符和&符号';
           }
         }
         break;
