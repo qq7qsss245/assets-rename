@@ -17,6 +17,7 @@ class FileManager {
     this.previewTableBody = document.getElementById('preview-table-body');
     this.dragOverlay = document.getElementById('drag-overlay');
     this.addMoreButton = document.getElementById('add-more-files');
+    this.selectedRowIndex = -1; // 当前选中的行索引
     this.init();
   }
   
@@ -25,6 +26,8 @@ class FileManager {
     this.setupClickSelect();
     this.setupPreviewDragAndDrop();
     this.setupAddMoreButton();
+    this.setupKeyboardEvents();
+    this.setupRowSelection();
   }
   
   /**
@@ -186,6 +189,7 @@ class FileManager {
     this.previewTable.classList.add('d-none');
     window.selectedFiles = [];
     window.previewData = [];
+    this.clearRowSelection();
   }
   
   /**
@@ -273,7 +277,7 @@ class FileManager {
       const previewClass = item.success ? 'preview-status-success' : 'preview-status-error';
       
       html += `
-        <tr data-file-index="${index}">
+        <tr data-file-index="${index}" tabindex="0" class="table-row-clickable">
           <td class="preview-filename" title="${item.originalPath || item.originalName}">
             ${item.originalName}
           </td>
@@ -293,6 +297,14 @@ class FileManager {
     
     // 绑定删除按钮事件
     this.bindDeleteButtons();
+    
+    // 自动选中第一条记录（如果有记录的话）
+    if (metadata.length > 0) {
+      // 延迟选中，确保DOM已更新
+      setTimeout(() => {
+        this.selectRow(0);
+      }, 10);
+    }
   }
   
   /**
@@ -384,6 +396,172 @@ class FileManager {
   }
   
   /**
+   * 设置键盘事件监听
+   */
+  setupKeyboardEvents() {
+    // 监听全局键盘事件
+    document.addEventListener('keydown', (e) => {
+      // 只在预览界面显示时处理键盘事件
+      if (this.previewTable.classList.contains('d-none')) {
+        return;
+      }
+      
+      // 检查是否在输入框中，如果是则不处理
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+      }
+      
+      // 处理键盘事件
+      switch (e.key) {
+        case 'Backspace':
+        case 'Delete':
+          if (this.selectedRowIndex >= 0) {
+            e.preventDefault();
+            this.deleteSelectedFile();
+          }
+          break;
+          
+        case 'ArrowUp':
+          e.preventDefault();
+          this.selectPreviousRow();
+          break;
+          
+        case 'ArrowDown':
+          e.preventDefault();
+          this.selectNextRow();
+          break;
+      }
+    });
+  }
+  
+  /**
+   * 设置行选中功能
+   */
+  setupRowSelection() {
+    // 使用事件委托监听表格行点击
+    this.previewTableBody.addEventListener('click', (e) => {
+      // 如果点击的是删除按钮，不处理行选中
+      if (e.target.closest('.delete-file-btn')) {
+        return;
+      }
+      
+      const row = e.target.closest('tr');
+      if (row && row.hasAttribute('data-file-index')) {
+        const fileIndex = parseInt(row.getAttribute('data-file-index'));
+        this.selectRow(fileIndex);
+      }
+    });
+  }
+  
+  /**
+   * 选中指定行
+   * @param {number} fileIndex - 文件索引
+   */
+  selectRow(fileIndex) {
+    // 移除之前选中行的样式
+    this.clearRowSelection();
+    
+    // 设置新的选中行
+    this.selectedRowIndex = fileIndex;
+    
+    // 添加选中样式并设置焦点
+    const row = this.previewTableBody.querySelector(`tr[data-file-index="${fileIndex}"]`);
+    if (row) {
+      row.classList.add('table-row-selected');
+      row.focus();
+      
+      // 确保选中的行在视口内可见
+      row.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }
+  }
+  
+  /**
+   * 清除行选中状态
+   */
+  clearRowSelection() {
+    // 移除所有行的选中样式
+    const selectedRows = this.previewTableBody.querySelectorAll('.table-row-selected');
+    selectedRows.forEach(row => {
+      row.classList.remove('table-row-selected');
+    });
+    this.selectedRowIndex = -1;
+  }
+  
+  /**
+   * 删除选中的文件
+   */
+  async deleteSelectedFile() {
+    if (this.selectedRowIndex < 0 || this.selectedRowIndex >= window.selectedFiles.length) {
+      return;
+    }
+    
+    try {
+      const deletedIndex = this.selectedRowIndex;
+      
+      // 从数组中移除文件
+      window.selectedFiles.splice(this.selectedRowIndex, 1);
+      
+      // 检查是否还有文件
+      if (window.selectedFiles.length === 0) {
+        // 没有文件了，返回拖拽界面
+        this.showDropZone();
+      } else {
+        // 重新生成预览
+        await this.generatePreview(window.selectedFiles);
+        
+        // 智能选中下一条记录
+        let newSelectedIndex = deletedIndex;
+        if (newSelectedIndex >= window.selectedFiles.length) {
+          // 如果删除的是最后一条，选中新的最后一条
+          newSelectedIndex = window.selectedFiles.length - 1;
+        }
+        
+        if (newSelectedIndex >= 0 && newSelectedIndex < window.selectedFiles.length) {
+          setTimeout(() => {
+            this.selectRow(newSelectedIndex);
+          }, 10);
+        }
+      }
+    } catch (error) {
+      console.error('删除文件失败:', error);
+      showAlert('删除文件失败', 'danger');
+    }
+  }
+  
+  /**
+   * 选中上一行
+   */
+  selectPreviousRow() {
+    if (window.selectedFiles.length === 0) return;
+    
+    if (this.selectedRowIndex <= 0) {
+      // 如果当前是第一行或没有选中，选中最后一行
+      this.selectRow(window.selectedFiles.length - 1);
+    } else {
+      // 选中上一行
+      this.selectRow(this.selectedRowIndex - 1);
+    }
+  }
+  
+  /**
+   * 选中下一行
+   */
+  selectNextRow() {
+    if (window.selectedFiles.length === 0) return;
+    
+    if (this.selectedRowIndex < 0 || this.selectedRowIndex >= window.selectedFiles.length - 1) {
+      // 如果当前是最后一行或没有选中，选中第一行
+      this.selectRow(0);
+    } else {
+      // 选中下一行
+      this.selectRow(this.selectedRowIndex + 1);
+    }
+  }
+  
+  /**
    * 显示拖拽遮罩
    */
   showDragOverlay() {
@@ -445,6 +623,13 @@ class FileManager {
         // 重新生成预览
         await this.generatePreview(window.selectedFiles);
         showAlert(`已删除文件 "${fileName}"`, 'success');
+        
+        // 自动选中第一条记录
+        if (window.selectedFiles.length > 0) {
+          setTimeout(() => {
+            this.selectRow(0);
+          }, 10);
+        }
       }
     } catch (error) {
       console.error('删除文件失败:', error);
